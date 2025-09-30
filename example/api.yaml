@@ -1,0 +1,35 @@
+openapi: "3.0.0"
+
+info: 
+  title: "OpenAPI Test"
+  version: "0.0.0"
+  
+paths:
+  /jobs:
+    get: 
+      operationId: ListJobs
+      summary: "..."
+      responses:
+        200:
+          description: "..."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+components:
+  schemas:
+    Job:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+        status:
+          $ref: "#/components/schemas/Status"
+    Status:
+      type: string
+      enum: [unspecified, todo, doing, done]

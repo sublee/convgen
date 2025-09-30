@@ -1,0 +1,27 @@
+version: "2"
+
+run:
+  build-tags:
+    - convgen
+
+linters:
+  enable:
+    - gocyclo
+
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*github.com/sublee/convgen/internal/codefmt.Writer).Printf
+        - github.com/sublee/convgen/internal/codefmt.Fprintf
+        - fmt.Fprintf(fmt.State)
+        - go/printer.Fprint(*bytes.Buffer)
+        - io.Copy
+        - io.WriteString
+        - (*text/tabwriter.Writer).Flush
+
+    staticcheck:
+      checks:
+        - -QF1001 # could apply De Morgan's law
+
+    gocyclo:
+      min-complexity: 25

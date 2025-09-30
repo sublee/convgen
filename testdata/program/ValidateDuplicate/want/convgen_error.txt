@@ -1,0 +1,6 @@
+main/main.go:18:2: duplicate int to string converter
+	previous import of strconv.Itoa at main/main.go:17:2
+main/main.go:25:10: duplicate X to Y converter
+	previous import of xToY at main/main.go:19:2
+main/main.go:27:10: duplicate Y to X converter
+	previous declaration at main/main.go:26:10

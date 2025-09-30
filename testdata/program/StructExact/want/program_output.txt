@@ -1,0 +1,1 @@
+{String:hello Int:42 Array:[97 98 99] Slice:[100 101 102] Map:map[103:104]}

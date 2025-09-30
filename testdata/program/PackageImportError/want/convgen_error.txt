@@ -1,0 +1,2 @@
+main/main.go:4:2: could not import example.com/PackageListError/broken (invalid package name: "")
+main/main.go:5:11: could not import github.com/sublee/convgen/NOT_FOUND (invalid package name: "")

@@ -1,0 +1,6 @@
+main.Y0{}
+main.Y1{}
+<nil>
+main.Y0{}
+main.Y1{}
+main.y2{}

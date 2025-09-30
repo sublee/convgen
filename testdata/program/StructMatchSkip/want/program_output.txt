@@ -1,0 +1,3 @@
+main.Y{Bar:0, Baz:0}
+main.Y{Bar:0, Baz:4}
+&main.Y{Bar:0, Baz:6}

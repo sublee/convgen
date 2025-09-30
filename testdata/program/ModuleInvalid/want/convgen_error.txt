@@ -1,0 +1,11 @@
+main/main.go:27:10: cannot assign module to variable inside function
+main/main.go:31:9: cannot assign module to variable inside function
+main/main.go:36:10: cannot assign module to variable inside function
+main/main.go:41:16: cannot assign module to variable inside function
+main/main.go:41:34: cannot assign module to variable inside function
+main/main.go:46:6: cannot assign module to variable inside function
+main/main.go:52:9: cannot assign RenameToLower to variable
+main/main.go:53:11: cannot assign FieldGetter to variable
+main/main.go:63:11: cannot assign RenameToLower to variable
+main/main.go:64:26: option must be inlined, not assigned to variable
+main/main.go:68:25: option must be convgen directive

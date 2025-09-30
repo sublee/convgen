@@ -1,0 +1,7 @@
+func(main.X) main.Y
+func(main.X) main.Y
+func(main.X) main.Y
+func(main.X) main.Y
+func(main.X) main.Y
+func(main.X) main.Y
+int

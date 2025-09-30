@@ -1,0 +1,641 @@
+// Package convgen provides directives for type-safe conversion code generation.
+//
+// Convgen eliminates tons of manual boilerplate code in type conversion.
+// Declare a conversion with a type pair and its configuration once, and the
+// generator produces the converter implementation. Type-safe settings catch
+// configuration errors at compile time, while unmatched fields are diagnosed at
+// generation time, enabling fast and confident refactoring.
+//
+// To start with Convgen, add a build constraint to files containing Convgen
+// directives:
+//
+//	//go:build convgen
+//
+// Conversions can be declared with Convgen directives. Conversions between
+// struct-to-struct ([Struct]), idiomatic union-style interface-to-interface
+// ([Union]), and enum-to-enum ([Enum]) are supported. Convgen automaticall
+// matches their fields, implementations, and values by name. It also provides
+// configurable renaming rules, integration with custom conversion functions,
+// and error-aware conversions for flexible adaptation to various use cases:
+//
+//	// source:
+//	var EncodeUser = convgen.Struct[model.User, pb.User](nil)
+//
+//	// generated: (simplified)
+//	func EncodeUser(in model.User) (out pb.User) {
+//		out.Name = in.Name
+//		out.Email = in.Email
+//		return
+//	}
+//
+// After declaring conversions, run the convgen command. It will generate
+// convgen_gen.go for your package:
+//
+//	go run github.com/sublee/convgen/cmd/convgen
+//
+// # Configurations
+//
+// When field mappings are ambiguous or incomplete, Convgen reports detailed
+// diagnostics. For example, if our model.User has an ID field but pb.User has
+// Id (with a lower case "d") instead, so they don't match exactly:
+//
+//	main.go:10:10: invalid match between model.User and pb.User
+//		FAIL: ID -> ?  // missing
+//		FAIL: ?  -> Id // missing
+//
+// Renaming rules can be applied to resolve those mismatches. In this case, we
+// can solve with just [RenameToLower]. It renames model.User.ID and pb.User.Id
+// both to become "id":
+//
+//	// source:
+//	var EncodeUser = convgen.Struct[model.User, pb.User](nil,
+//		convgen.RenameToLower(true, true),
+//	)
+//
+// There are many out-of-the-box renaming options. See [Option] for your
+// use case.
+//
+// Or, we can match them explicitly with [Match]. Because of it referring the
+// fields directly as code, we can detect broken configuration at compile time
+// in the future:
+//
+//	// source:
+//	var EncodeUser = convgen.Struct[model.User, pb.User](nil,
+//		convgen.Match(model.User{}.ID, pb.User{}.Id),
+//	)
+//
+// Note that many options have separate flags or arguments for input and output
+// types symmetrically.
+//
+// # Modules
+//
+// A converter may depend on other converters to convert inner types. [Module]
+// provides a shared namespace so that they can refer to each other
+// automatically. A module also holds the default configurations for the
+// underlying converters for uniformity:
+//
+//	// source:
+//	var (
+//		enc = convgen.Module(convgen.RenameToLower(true, true))
+//		EncodeUser = convgen.Struct[model.User, pb.User](enc)
+//		EncodeRole = convgen.Enum[model.Role, pb.Role](enc, pb.Role_ROLE_UNSPECIFIED, convgen.RenameTrimCommonPrefix(true, true))
+//	)
+//
+//	// generated: (simplified)
+//	func EncodeUser(in model.User) (out pb.User) {
+//		out.Name = in.Name
+//		out.Email = in.Email
+//		out.Role = EncodeRole(in.Role)
+//		           ^^^^^^^^^^^^^^^^^^^ // reused converter in the same module
+//		return
+//	}
+//	func EncodeRole(in model.Role) (out pb.Role) {
+//		switch in {
+//		case model.RoleAdmin:
+//			return pb.Role_ROLE_ADMIN
+//		case model.RoleMember:
+//			return pb.Role_ROLE_MEMBER
+//		default:
+//			return pb.Role_ROLE_UNSPECIFIED
+//		}
+//	}
+//
+// Conversions are often more than field-to-field copies. If Convgen cannot
+// determine how to convert a type to another type, it reports an error.
+// However, a custom function can be used for any type conversion. A custom
+// function can be imported into a module by [ImportFunc].
+//
+// For example, when model.User.ID is int but pb.User.ID is string, a func(int)
+// string like strconv.Itoa can be imported to convert them:
+//
+//	// source:
+//	var (
+//		enc = convgen.Module(convgen.ImportFunc(strconv.Itoa))
+//		EncodeUser = convgen.Struct[model.User, pb.User](enc)
+//	)
+//
+//	// generated: (simplified)
+//	func EncodeUser(in model.User) (out pb.User) {
+//		out.ID = strconv.Itoa(in.ID)
+//		         ^^^^^^^^^^^^^^^^^^^ // custom conversion function
+//		out.Name = in.Name
+//		out.Email = in.Email
+//		return
+//	}
+//
+// # Errors
+//
+// Converter directives have Err variants: [StructErr], [UnionErr], and
+// [EnumErr]. They generate converter functions that may return an error. They
+// can use other errorful converters in the same module. Custom errorful
+// conversion functions can be imported by [ImportFuncErr].
+//
+// In the above example, we could encode model.User to pb.User without any
+// error. But the reverse is not possible because string to int conversion
+// (pb.User.ID to model.User.ID) may fail at runtime. So, we need to use the Err
+// variants:
+//
+//	// source:
+//	var (
+//		dec = convgen.Module(convgen.ImportFuncErr(strconv.Atoi))
+//		DecodeUser = convgen.StructErr[pb.User, model.User](dec)
+//	)
+//
+//	// generated: (simplified)
+//	func DecodeUser(in pb.User) (out model.User, err error) {
+//	                                             ^^^^^^^^^ // may return error
+//		out.ID, err = strconv.Atoi(in.ID)
+//		        ^^^^^^^^^^^^^^^^^^^^^^^^^ // custom conversion function with error
+//		out.Name = in.Name
+//		out.Email = in.Email
+//		return
+//	}
+//
+// Note that converters returning error may use errorless converters in the same
+// module, but not vice versa. This restriction ensures that errorless
+// converters never return an error at runtime.
+package convgen
+
+// module provides a shared namespace and default configurations for underlying
+// converters. This is unexported so there is no way to create a module other
+// than [Module].
+type module *struct{}
+
+type Option[T any] = T
+
+type (
+	// option for [Module]
+	moduleOption interface{ convgenModuleOption() }
+
+	// option for [ForStruct], [ForUnion], [ForEnum], and [Module]
+	forOption interface {
+		convgenForOption()
+		moduleOption
+	}
+
+	// option for [Struct] and [StructErr]
+	structOption interface {
+		convgenStructOption()
+		structErrOption
+	}
+
+	// option for [Union] and [UnionErr]
+	unionOption interface {
+		convgenUnionOption()
+		unionErrOption
+	}
+
+	// option for [Enum] and [EnumErr]
+	enumOption interface {
+		convgenEnumOption()
+		enumErrOption
+	}
+
+	// option for [StructErr]
+	structErrOption interface{ convgenStructErrOption() }
+
+	// option for [UnionErr]
+	unionErrOption interface{ convgenUnionErrOption() }
+
+	// option for [EnumErr]
+	enumErrOption interface{ convgenEnumErrOption() }
+)
+
+// Module provides a shared namespace of underlying converters to make them
+// discover and call each other to convert inner types. Also holds the default
+// configurations for the underlying converters for uniformity. Subconverters,
+// what are type converters Convgen has generated implicitly, inherit the module
+// and its configurations rather than the explicit parent converter.
+//
+// Pass a module as the first argument of a converter directive, then the
+// converter belongs to the module:
+//
+//	var mod = convgen.Module(convgen.RenameToLower(true, true))
+//	var conv = convgen.Struct[Foo, Bar](mod)
+//
+// To import arbitrary type converters into the namespace, use [ImportFunc] or
+// [ImportFuncErr]. To split default configurations for different kinds of
+// converters, use [ForStruct], [ForUnion], or [ForEnum] to qualify options. To
+// register error wrappers, use [ImportErrWrap].
+func Module(opts ...moduleOption) module {
+	panic("convgen: not generated")
+}
+
+func ForStruct(opts ...forOption) Option[moduleOption] {
+	panic("convgen: not generated")
+}
+
+func ForUnion(opts ...forOption) Option[moduleOption] {
+	panic("convgen: not generated")
+}
+
+func ForEnum(opts ...forOption) Option[moduleOption] {
+	panic("convgen: not generated")
+}
+
+// Converter directives declare converter functions between two types. The
+// actual implementation will be generated by the convgen command.
+type ConvFunc[T any] = T
+
+// Struct directive generates a converter function between two struct types
+// without error. The target types are declared as type parameters:
+//
+//	var XtoY = convgen.Struct[X, Y](nil)
+//
+//	func example() {
+//		y := XtoY(x)
+//	}
+//
+// In the above example, XtoY will be generated as a function of func(X) Y. It
+// matches fields by name unless specified otherwise by [Match]. If Convgen
+// cannot match all fields, consider using [MatchSkip] or renaming options such
+// as [RenameToLower].
+//
+// Since the generated function does not return an error, it cannot use other
+// errorful converter functions. If it is required to return an error, use
+// [StructErr] instead.
+func Struct[In, Out any](mod module, opts ...structOption) ConvFunc[func(In) Out] {
+	panic("convgen: not generated")
+}
+
+// StructErr directive generates a converter function between two struct types
+// with error. The target types are declared as type parameters:
+//
+//	func example() {
+//		y, err := XtoY(x)
+//	}
+//
+// In the above example, XtoY will be generated as a function of func(X) (Y,
+// error). It matches fields by name unless specified otherwise by [Match] or
+// related matching options.
+func StructErr[In, Out any](mod module, opts ...structErrOption) ConvFunc[func(In) (Out, error)] {
+	panic("convgen: not generated")
+}
+
+// Union marks a converter function between two interface types. It finds
+// implementations from the same package of each interface type or the sample
+// implementation specified by [DiscoverBySample]. The converter functions for
+// implementations have to be discoverable in the module.
+func Union[In, Out any](mod module, opts ...unionOption) ConvFunc[func(In) Out] {
+	panic("convgen: not generated")
+}
+
+// UnionErr marks a converter function between two interface types. It finds
+// implementations from the same package of each interface type or the sample
+// implementation specified by [DiscoverBySample]. The converter functions for
+// implementations have to be discoverable in the module.
+func UnionErr[In, Out any](mod module, opts ...unionErrOption) ConvFunc[func(In) (Out, error)] {
+	panic("convgen: not generated")
+}
+
+func Enum[In, Out any](mod module, unknown Out, opts ...enumOption) ConvFunc[func(In) Out] {
+	panic("convgen: not generated")
+}
+
+func EnumErr[In, Out any](mod module, unknown Out, opts ...enumErrOption) ConvFunc[func(In) (Out, error)] {
+	panic("convgen: not generated")
+}
+
+// ImportFunc is an option which registers a custom errorless converter function
+// (func(x) y) in the module. Converters in the module may use it to convert
+// inner types.
+//
+//	mod := convgen.New(convgen.ImportFunc(strconv.Itoa))
+//
+// Accepted by [Module] only.
+func ImportFunc[In, Out any](fn func(In) Out) Option[moduleOption] {
+	return nil
+}
+
+// ImportFuncErr is a module-level option which registers a custom errorful
+// converter function (func(x) (y, error)) in the module. Converters in the
+// module may use it to convert inner types.
+//
+//	mod := convgen.New(convgen.ImportFuncErr(strconv.Atoi))
+//
+// Accepted by [Module] only.
+func ImportFuncErr[In, Out any](fn func(In) (Out, error)) Option[moduleOption] {
+	return nil
+}
+
+func ImportErrWrap(fn func(error) error) Option[moduleOption] {
+	return nil
+}
+
+func ImportErrWrapReset() Option[moduleOption] {
+	return nil
+}
+
+// RenameReplace is a renaming option that registers a renaming rule that
+// replaces old with new for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameReplace(inOld, inNew, outOld, outNew string) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+func RenameReplaceRegexp(inRegexp, inRepl, outRegexp, outRepl string) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameToLower is a renaming option that registers a renaming rule that
+// converts to lowercase for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameToLower(inEnable, outEnable bool) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameToUppser is a renaming option that registers a renaming rule that
+// converts to uppercase for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameToUpper(inEnable, outEnable bool) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameTrimPrefix is a renaming option that registers a renaming rule that
+// trims a prefix for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameTrimPrefix(inPrefix, outPrefix string) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameTrimSuffix is a renaming option that registers a renaming rule that
+// trims a suffix for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameTrimSuffix(inSuffix, outSuffix string) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameTrimCommonPrefix is a renaming option that registers a renaming rule
+// trims the longest common prefix for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameTrimCommonPrefix(inEnable, outEnable bool) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameTrimCommonSuffix is a renaming option that registers a renaming rule
+// trims the longest common suffix for matching names.
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
+// [Enum], and [EnumErr].
+func RenameTrimCommonSuffix(inEnable, outEnable bool) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// RenameReset is a renaming option that clears all the renaming rules
+// registered so far.
+func RenameReset(inCancel, outCancel bool) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// Path parameters indicate a specific type or struct field.
+//
+// A type itself, a field of a struct, or a nested field can be indicated as a
+// Path:
+//
+//	Order{}
+//	Order{}.ID
+//	Order{}.Address.City
+//
+// The pointer type also can be indicated:
+//
+//	(*Order)(nil).SetID
+type Path = any
+
+// Match is a converter-level option which matches a pair manually.
+//
+//	convgen.Struct[X, Y](mod,
+//		convgen.Match(X{}.ID, Y{}.Identifier),
+//	)
+//
+// Accepted by [Struct], [StructErr], [Union], [UnionErr], [Enum], and
+// [EnumErr].
+func Match(inPath, outPath Path) Option[interface {
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// MatchFunc is a converter-level option which matches a pair manually. It also
+// specifies a custom errorless converter function for converting them.
+//
+//	convgen.Struct[X, Y](mod,
+//		convgen.MatchFunc(X{}.Name, Y{}.DisplayName, renderName),
+//	)
+//
+// Accepted by [Struct], [StructErr], [Union], and [UnionErr].
+func MatchFunc[In, Out Path](inPath In, outPath Out, fn func(In) Out) Option[interface {
+	structOption
+	unionOption
+}] {
+	return nil
+}
+
+// MatchFuncErr is a converter-level option which matches a pair manually. It also
+// specifies a custom errorful converter function for converting them.
+//
+//	convgen.StructErr[X, Y](mod,
+//		convgen.MatchFuncErr(X{}.UUID, Y{}.ID, parseUUID),
+//	)
+//
+// Accepted by [StructErr] and [UnionErr].
+func MatchFuncErr[In, Out Path](inPath In, outPath Out, fn func(In) (Out, error)) Option[interface {
+	structErrOption
+	unionErrOption
+}] {
+	return nil
+}
+
+// MatchSkip is a converter-level option which marks a specific matched pair to
+// be ignored. To suppress errors on missing items, mark them by this option
+// with [Missing].
+//
+//	convgen.Struct[X, Y](mod,
+//		convgen.MatchSkip(X{}.Metadata, Y{}.Metadata),
+//		convgen.MatchSkip(convgen.Missing, Y{}.Extra),
+//	)
+//
+// Accepted by [Struct], [StructErr], [Union], [UnionErr], [Enum], and
+// [EnumErr].
+func MatchSkip(inPath, outPath Path) Option[interface {
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// DiscoverBySample is a converter-level option which specifies a sample of
+// items. Convgen will look up other items from the same package of the given
+// sample.
+//
+// Accepted by [Union], [UnionErr], [Enum], and [EnumErr].
+func DiscoverBySample(inSample, outSample Path) Option[interface {
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// DiscoverUnexported enables to discover unexported fields, methods,
+// implmentations, and values in the same package.
+//
+//	type A struct { n int }
+//	type B struct { n int }
+//
+//	// Generate: b.n = a.n
+//	convgen.Struct[A, B](mod, convgen.DiscoverUnexported(true))
+//
+// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr], [Enum], and
+// [EnumErr].
+func DiscoverUnexported(inEnable, outEnable bool) Option[interface {
+	moduleOption
+	forOption
+	structOption
+	unionOption
+	enumOption
+}] {
+	return nil
+}
+
+// DiscoverGetters enables to match getter methods to access fields in a struct.
+//
+//	// Generate: b.ID = a.GetID()
+//	convgen.Struct[A, B](mod, convgen.DiscoverGetters(true, "Get", ""))
+//
+// Accepted by [Module], [Struct], and [StructErr].
+func DiscoverGetters(enable bool, prefix, suffix string) Option[interface {
+	moduleOption
+	forOption
+	structOption
+}] {
+	return nil
+}
+
+// DiscoverSetters enables to match setter methods to set fields in a struct.
+//
+//	// Generate: b.SetID(a.ID)
+//	convgen.Struct[A, B](mod, convgen.DiscoverSetters(true, "Set", ""))
+//
+// Accepted by [Module], [Struct], and [StructErr].
+func DiscoverSetters(enable bool, prefix, suffix string) Option[interface {
+	moduleOption
+	forOption
+	structOption
+}] {
+	return nil
+}
+
+// DiscoverNested is a converter-level option which ...
+//
+//	convgen.Struct[Person, FlatPerson](mod,
+//		convgen.DiscoverNested(Person{}.Address, FlatPerson{}),
+//	)
+//
+// Accepted by [Struct] and [StructErr].
+func DiscoverNested(inPath, outPath Path) Option[interface {
+	structOption
+}] {
+	return nil
+}
+
+type Field[T any] = T
+
+// FieldGetter wraps an errorless getter function (func() y) in [MatchFunc] or
+// [MatchFuncErr]. This helps to resolve type errors.
+//
+//	convgen.Struct[X, Y](mod,
+//		convgen.WireMapFunc(convgen.FieldGetter(X{}.Name), Y{}.Name, rename),
+//	)
+func FieldGetter[In any](fn func() In) Field[In] { return *new(In) }
+
+// FieldGetterErr wraps an errorful getter function (func() (y, error)) in
+// [MatchFunc] or [MatchFuncErr]. This helps to resolve type errors.
+//
+//	convgen.StructErr[X, Y](mod,
+//		convgen.WireMapFunc(convgen.FieldGetterErr(X{}.Name), Y{}.Name, rename),
+//	)
+func FieldGetterErr[In any](fn func() (In, error)) Field[In] { return *new(In) }
+
+// FieldSetter wraps an errorless setter function (func(x)) in [MatchFunc] or
+// [MatchFuncErr]. This helps to resolve type errors.
+//
+//	convgen.Struct[X, Y](mod,
+//		convgen.WireMapFunc(X{}.Name, convgen.FieldSetter((*Y)(nil).SetName), rename),
+//	)
+func FieldSetter[Out any](fn func(Out)) Field[Out] { return *new(Out) }
+
+// FieldSetterErr wraps an errorful setter function (func(x) error) in [MatchFunc]
+// or [MatchFuncErr]. This helps to resolve type errors.
+//
+//	convgen.StructErr[X, Y](mod,
+//		convgen.WireMapFunc(X{}.Name, convgen.FieldSetterErr((*Y)(nil).SetName), rename),
+//	)
+func FieldSetterErr[Out any](fn func(Out) error) Field[Out] { return *new(Out) }

@@ -1,0 +1,3 @@
+int32 123
+string 123
+main.YY{Int8_Int32:main.Y[int32]{Value:123}, Int_String:main.Y[string]{Value:"123"}}

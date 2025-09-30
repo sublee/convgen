@@ -1,0 +1,3 @@
+main.Y{Lorem:"123", Ipsum:456, MissY:0}
+&main.Y{Lorem:"123", Ipsum:456, MissY:0}
+converting X.World: strconv.Atoi: parsing "NaN": invalid syntax

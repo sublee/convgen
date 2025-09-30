@@ -1,0 +1,2 @@
+main/main.go:9:12: narrowing from struct{X int32}.X (int32) to struct{X int8}.X (int8) causes precision loss
+    consider convgen.ImportFunc(func(int32) int8) for explicit conversion

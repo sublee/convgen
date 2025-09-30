@@ -1,0 +1,1 @@
+main/bad.go:4:8: file must have "//go:build convgen" constraint when importing convgen

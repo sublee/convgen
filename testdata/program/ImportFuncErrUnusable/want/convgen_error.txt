@@ -1,0 +1,3 @@
+main/main.go:24:12: strconv.Atoi error cannot be returned
+	String.X (string) -> Int.X (int)
+	calling strconv.Atoi(string) (int, error)

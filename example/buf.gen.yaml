@@ -1,0 +1,12 @@
+version: v2
+inputs:
+  - directory: .
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: example.com/ProtoToSQLC/pb
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.8
+    out: pb
+    opt: paths=source_relative

@@ -1,0 +1,21 @@
+{
+    "[go]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "golang.go",
+    },
+    "go.lintTool": "golangci-lint-v2",
+    "go.lintFlags": ["--build-tags=convgen"],
+    "go.alternateTools": {
+        "golangci-lint-v2": "${workspaceRoot}/golangci-lint-convgen",
+    },
+    "gopls": {
+        "ui.semanticTokens": true,
+        "formatting.gofumpt": true,
+        "formatting.local": "github.com/sublee/convgen,example.com",
+        "build.buildFlags": ["-tags=convgen"],
+    },
+    "[plaintext]": {
+        "editor.insertSpaces": false,
+        "editor.tabSize": 4,
+    },
+}

@@ -1,0 +1,8 @@
+version: v2.5.0
+
+name: golangci-lint-convgen
+
+plugins:
+  - module: github.com/sublee/convgen
+    import: github.com/sublee/convgen/cmd/golangci-lint-convgen
+    path: .

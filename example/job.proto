@@ -1,0 +1,14 @@
+syntax = "proto3";
+package pb;
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_TODO = 1;
+  STATUS_DOING = 2;
+  STATUS_DONE = 3;
+}
+
+message Job {
+  int64 id = 1;
+  Status status = 2;
+}

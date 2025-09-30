@@ -1,0 +1,4 @@
+main/main.go:21:9: X has no methods; union requires at least one
+main/main.go:21:9: Y has no methods; union requires at least one
+main/main.go:22:9: X has no methods; union requires at least one
+main/main.go:22:9: other.Z has no methods; union requires at least one

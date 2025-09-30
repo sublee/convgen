@@ -1,0 +1,2 @@
+main/main.go:1:13: expected ';', found '('
+-: package ; expected package main

@@ -4,7 +4,7 @@
         "editor.defaultFormatter": "golang.go",
     },
     "go.lintTool": "golangci-lint-v2",
-    "go.lintFlags": ["--build-tags=convgen"],
+    "go.lintFlags": ["--build-tags=convgen", "--config=${workspaceRoot}/.golangci-custom.yaml"],
     "go.alternateTools": {
         "golangci-lint-v2": "${workspaceRoot}/golangci-lint-convgen",
     },

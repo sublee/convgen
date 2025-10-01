@@ -25,3 +25,7 @@ linters:
 
     gocyclo:
       min-complexity: 25
+
+    custom:
+      convgen:
+        type: module

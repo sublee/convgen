@@ -169,6 +169,11 @@ func (e entry) String() string {
 	}
 
 	name := e.CrumbName()
+	if i := strings.Index(name, "."); i != -1 {
+		// Discard the leading path if it exists.
+		name = name[i+1:]
+	}
+
 	if e.key == name {
 		return name
 	}

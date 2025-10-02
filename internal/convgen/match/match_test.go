@@ -71,11 +71,11 @@ func TestMissing(t *testing.T) {
 
 	v := m.Visualize()
 	assert.Contains(t, ss(v), ss(`
-FAIL: Apple [fruit.apple]           -> ? // missing
-FAIL: Banana [fruit.banana]         -> ? // missing
-ok:   Clementine [fruit.clementine] -> Clementine [person.clementine]
-FAIL: ?                             -> Alice [person.alice] // missing
-FAIL: ?                             -> Bob [person.bob]     // missing
+FAIL: Apple [apple]           -> ? // missing
+FAIL: Banana [banana]         -> ? // missing
+ok:   Clementine [clementine] -> Clementine [clementine]
+FAIL: ?                       -> Alice [alice] // missing
+FAIL: ?                       -> Bob [bob]     // missing
 `), v)
 }
 
@@ -141,9 +141,9 @@ func Test2to1_Ambiguous(t *testing.T) {
 
 	v := m.Visualize()
 	assert.Contains(t, ss(v), ss(`
-ok:   A [fruit.apple]   -> A [person.alice]
-FAIL: A [fruit.avocado] -> A [person.alice] // ambiguous
-FAIL: A [fruit.acai]    -> A [person.alice] // ambiguous
+ok:   A [apple]   -> A [alice]
+FAIL: A [avocado] -> A [alice] // ambiguous
+FAIL: A [acai]    -> A [alice] // ambiguous
 `), v)
 }
 
@@ -159,8 +159,8 @@ func TestForced(t *testing.T) {
 
 	v := m.Visualize()
 	assert.Contains(t, ss(v), ss(`
-ok: A [fruit.apple]  -> B [person.bob]   // forced at -:-
-ok: B [fruit.banana] -> A [person.alice] // forced at -:-
+ok: A [apple]  -> B [bob]   // forced at -:-
+ok: B [banana] -> A [alice] // forced at -:-
 `), v)
 }
 
@@ -180,11 +180,11 @@ func TestSkipped(t *testing.T) {
 
 	v := m.Visualize()
 	assert.Contains(t, ss(v), ss(`
-ok:   A [fruit.apple]  .. A [person.alice]      // skipped match at -:-
-FAIL: B [fruit.banana] .. A [person.alice]      // ineffective skip at -:-
-ok:   B [fruit.banana] -> B [person.bob]
-ok:   D [fruit.durian] .. ?                     // skipped missing at -:-
-ok:   ?                .. C [person.clementine] // skipped missing at -:-
+ok:   A [apple]  .. A [alice]      // skipped match at -:-
+FAIL: B [banana] .. A [alice]      // ineffective skip at -:-
+ok:   B [banana] -> B [bob]
+ok:   D [durian] .. ?              // skipped missing at -:-
+ok:   ?          .. C [clementine] // skipped missing at -:-
 `), v)
 }
 
@@ -197,8 +197,8 @@ func TestUnknown(t *testing.T) {
 
 	v := m.Visualize()
 	assert.Contains(t, ss(v), ss(`
-ok:   A [fruit.apple] -> A [person.alice]
-ok:   ?               -> B [person.bob] // unknown value may be missing
+ok:   A [apple] -> A [alice]
+ok:   ?         -> B [bob] // unknown value may be missing
 `), v)
 }
 
@@ -212,7 +212,7 @@ func TestDelete(t *testing.T) {
 	m.DeleteX(1)
 	m.DeleteY(2)
 
-	assert.Equal(t, "ok: B [fruit.banana] -> B [person.bob]", m.Visualize())
+	assert.Equal(t, "ok: B [banana] -> B [bob]", m.Visualize())
 }
 
 func TestMatchErrorIndent(t *testing.T) {

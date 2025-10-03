@@ -215,36 +215,38 @@ func ForEnum(opts ...forOption) Option[yes, no, no, no, no] {
 }
 
 // Struct directive generates a converter function between two struct types
-// without error. The target types are declared as type parameters:
+// without error.
 //
-//	var XtoY = convgen.Struct[X, Y](nil)
+//	// source:
+//	var convUser = convgen.Struct[User, pb.User](nil)
 //
-//	func example() {
-//		y := XtoY(x)
+// The input and output types are declared as type parameters. The variable that
+// holds the directive is rewritten to the actual function when Convgen
+// generates code:
+//
+//	// generated: (simplified)
+//	func convUser(in User) (out pb.User) {
+//		out.Name = in.Name
+//		out.Email = in.Email
+//		return
 //	}
 //
-// In the above example, XtoY will be generated as a function of func(X) Y. It
-// matches fields by name unless specified otherwise by [Match]. If Convgen
-// cannot match all fields, consider using [MatchSkip] or renaming options such
-// as [RenameToLower].
+// By default, fields are matched by name. If any field cannot be matched,
+// Convgen reports errors at generation time. Use options such as [Match] or
+// renaming rules (e.g., [RenameReplace], [RenameToLower]) to control the
+// matching behavior. You can also enable [DiscoverGetters] or [DiscoverSetters]
+// to match getter/setter methods instead of accessing fields directly.
 //
-// Since the generated function does not return an error, it cannot use other
-// errorful converter functions. If it is required to return an error, use
-// [StructErr] instead.
+// Since the generated function does not return an error, it cannot call other
+// errorful functions. If error handling is required, use [StructErr] instead.
 func Struct[In, Out any](mod module, opts ...structOption) func(In) Out {
 	panic("convgen: not generated")
 }
 
-// StructErr directive generates a converter function between two struct types
-// with error. The target types are declared as type parameters:
-//
-//	func example() {
-//		y, err := XtoY(x)
-//	}
-//
-// In the above example, XtoY will be generated as a function of func(X) (Y,
-// error). It matches fields by name unless specified otherwise by [Match] or
-// related matching options.
+// StructErr is the error-returning variant of [Struct]. It generates a
+// converter function that returns (Out, error) instead of just Out. Unlike
+// [Struct], StructErr allows the generated converter to call other functions
+// within the same [Module] that may themselves return an error.
 func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }

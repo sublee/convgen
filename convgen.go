@@ -19,10 +19,10 @@
 // and error-aware conversions for flexible adaptation to various use cases:
 //
 //	// source:
-//	var EncodeUser = convgen.Struct[model.User, api.User](nil)
+//	var EncodeUser = convgen.Struct[User, api.User](nil)
 //
 //	// generated: (simplified)
-//	func EncodeUser(in model.User) (out api.User) {
+//	func EncodeUser(in User) (out api.User) {
 //		out.Name = in.Name
 //		out.Email = in.Email
 //		return
@@ -36,19 +36,19 @@
 // # Configurations
 //
 // When field mappings are ambiguous or incomplete, Convgen reports detailed
-// diagnostics. For example, if our model.User has an ID field but api.User has
-// Id (with a lower case "d") instead, so they don't match exactly:
+// diagnostics. For example, if our User has an ID field but api.User has Id
+// (with a lower case "d") instead, so they don't match exactly:
 //
-//	main.go:10:10: invalid match between model.User and api.User
+//	main.go:10:10: invalid match between User and api.User
 //		FAIL: ID -> ?  // missing
 //		FAIL: ?  -> Id // missing
 //
 // Renaming rules can be applied to resolve those mismatches. In this case, we
-// can solve with just [RenameToLower]. It renames model.User.ID and api.User.Id
-// both to become "id":
+// can solve with just [RenameToLower]. It renames User.ID and api.User.Id both
+// to become "id":
 //
 //	// source:
-//	var EncodeUser = convgen.Struct[model.User, api.User](nil,
+//	var EncodeUser = convgen.Struct[User, api.User](nil,
 //		convgen.RenameToLower(true, true),
 //	)
 //
@@ -60,8 +60,8 @@
 // in the future:
 //
 //	// source:
-//	var EncodeUser = convgen.Struct[model.User, api.User](nil,
-//		convgen.Match(model.User{}.ID, api.User{}.Id),
+//	var EncodeUser = convgen.Struct[User, api.User](nil,
+//		convgen.Match(User{}.ID, api.User{}.Id),
 //	)
 //
 // Note that many options have separate flags or arguments for input and output
@@ -77,23 +77,23 @@
 //	// source:
 //	var (
 //		enc = convgen.Module(convgen.RenameToLower(true, true))
-//		EncodeUser = convgen.Struct[model.User, api.User](enc)
-//		EncodeRole = convgen.Enum[model.Role, api.Role](enc, api.ROLE_UNSPECIFIED, convgen.RenameTrimCommonPrefix(true, true))
+//		EncodeUser = convgen.Struct[User, api.User](enc)
+//		EncodeRole = convgen.Enum[Role, api.Role](enc, api.ROLE_UNSPECIFIED, convgen.RenameTrimCommonPrefix(true, true))
 //	)
 //
 //	// generated: (simplified)
-//	func EncodeUser(in model.User) (out api.User) {
+//	func EncodeUser(in User) (out api.User) {
 //		out.Name = in.Name
 //		out.Email = in.Email
 //		out.Role = EncodeRole(in.Role)
 //		           ^^^^^^^^^^^^^^^^^^^ // reused converter in the same module
 //		return
 //	}
-//	func EncodeRole(in model.Role) (out api.Role) {
+//	func EncodeRole(in Role) (out api.Role) {
 //		switch in {
-//		case model.RoleAdmin:
+//		case RoleAdmin:
 //			return api.ROLE_ADMIN
-//		case model.RoleMember:
+//		case RoleMember:
 //			return api.ROLE_MEMBER
 //		default:
 //			return api.ROLE_UNSPECIFIED
@@ -105,17 +105,17 @@
 // However, a custom function can be used for any type conversion. A custom
 // function can be imported into a module by [ImportFunc].
 //
-// For example, when model.User.ID is int but api.User.ID is string, a func(int)
+// For example, when User.ID is int but api.User.ID is string, a func(int)
 // string like strconv.Itoa can be imported to convert them:
 //
 //	// source:
 //	var (
 //		enc = convgen.Module(convgen.ImportFunc(strconv.Itoa))
-//		EncodeUser = convgen.Struct[model.User, api.User](enc)
+//		EncodeUser = convgen.Struct[User, api.User](enc)
 //	)
 //
 //	// generated: (simplified)
-//	func EncodeUser(in model.User) (out api.User) {
+//	func EncodeUser(in User) (out api.User) {
 //		out.ID = strconv.Itoa(in.ID)
 //		         ^^^^^^^^^^^^^^^^^^^ // custom conversion function
 //		out.Name = in.Name
@@ -130,20 +130,19 @@
 // can use other errorful converters in the same module. Custom errorful
 // conversion functions can be imported by [ImportFuncErr].
 //
-// In the above example, we could encode model.User to api.User without any
-// error. But the reverse is not possible because string to int conversion
-// (api.User.ID to model.User.ID) may fail at runtime. So, we need to use the
-// Err variants:
+// In the above example, we could encode User to api.User without any error. But
+// the reverse is not possible because string to int conversion (api.User.ID to
+// User.ID) may fail at runtime. So, we need to use the Err variants:
 //
 //	// source:
 //	var (
 //		dec = convgen.Module(convgen.ImportFuncErr(strconv.Atoi))
-//		DecodeUser = convgen.StructErr[api.User, model.User](dec)
+//		DecodeUser = convgen.StructErr[api.User, User](dec)
 //	)
 //
 //	// generated: (simplified)
-//	func DecodeUser(in api.User) (out model.User, err error) {
-//	                                              ^^^^^^^^^ // may return error
+//	func DecodeUser(in api.User) (out User, err error) {
+//	                                        ^^^^^^^^^ // may return error
 //		out.ID, err = strconv.Atoi(in.ID)
 //		        ^^^^^^^^^^^^^^^^^^^^^^^^^ // custom conversion function with error
 //		out.Name = in.Name

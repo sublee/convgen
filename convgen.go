@@ -352,6 +352,36 @@ func EnumErr[In, Out any](mod module, default_ Out, opts ...enumOption) func(In)
 	panic("convgen: not generated")
 }
 
+// Option configures how converters are generated. They are categorized by their
+// prefix:
+//
+//   - Import: Registers a custom conversion function or error wrapper so that
+//     converters in the module can use them.
+//   - Discover: Configures how Convgen discovers targets such as fields,
+//     implementations, or enum members.
+//   - Rename: Appends or resets renaming rules before matching fields,
+//     implementations, or members. The rules are applied in the order they are
+//     registered.
+//   - Match: Manually matches or skips a specific pair, optionally with a
+//     custom matcher function.
+//
+// For-prefixed options are meta-options that restrict where the registered
+// options apply. For example, an option registered with [ForStruct] affects
+// only struct converters within the module.
+//
+// Not every option can be applied to every converter directive. There are five
+// scopes of options:
+//
+//  1. Module-level options: accepted by [Module] only.
+//  2. For-qualifier options: accepted by [ForStruct], [ForUnion], and [ForEnum] only.
+//  3. Struct-level options: accepted by [Struct], [StructErr], and [ForStruct] only.
+//  4. Union-level options: accepted by [Union], [UnionErr], and [ForUnion] only.
+//  5. Enum-level options: accepted by [Enum], [EnumErr], and [ForEnum] only.
+//
+// The type parameters of [Option] indicate which scopes the option can be
+// applied to. For example, Option[yes, no, yes, no, yes] can be applied to
+// module-level, struct-level, and enum-level directives. But not for-qualifier
+// or union-level ones.
 type Option[Module, For, Struct, Union, Enum canUseFor] interface {
 	moduleOption() Module
 	forOption() For

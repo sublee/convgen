@@ -242,11 +242,11 @@ func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, err
 
 // Union directive generates a converter function between two interface types
 // without error: Typically, union implementations share a common suffix, so
-// [RenameTrimCommonSuffix] is often used to match them:
+// [RenameTrimCommonWordSuffix] is often used to match them:
 //
 //	// source:
 //	var convEvent = convgen.Union[Event, api.Event](nil,
-//		convgen.RenameTrimCommonSuffix(true, true),
+//		convgen.RenameTrimCommonWordSuffix(true, true),
 //	)
 //
 // The input and output types are declared as type parameters. The variable that
@@ -306,12 +306,12 @@ func UnionErr[In, Out any](mod module, opts ...unionOption) func(In) (Out, error
 
 // Enum directive generates a converter function between two enum types without
 // error. The default output member must be specified explicitly. Typically,
-// enum members share a common prefix, so [RenameTrimCommonPrefix] is often used
-// to match them:
+// enum members share a common prefix, so [RenameTrimCommonWordPrefix] is often
+// used to match them:
 //
 //	// source:
 //	var convStatus = convgen.Enum[Status, api.Status](nil, api.STATUS_UNSPECIFIED,
-//		convgen.RenameTrimCommonPrefix(true, true),
+//		convgen.RenameTrimCommonWordPrefix(true, true),
 //	)
 //
 // The input and output types are declared as type parameters. The variable that

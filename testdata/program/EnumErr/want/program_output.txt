@@ -1,2 +1,3 @@
 Unknown
-converting Foo: unknown value 999
+converting Foo: unknown enum member 999: no match found
+true

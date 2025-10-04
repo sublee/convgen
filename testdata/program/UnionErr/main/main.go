@@ -3,9 +3,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sublee/convgen"
+	"github.com/sublee/convgen/pkg/convgenerrors"
 )
 
 type (
@@ -23,7 +25,10 @@ func (x1) x() {}
 var XtoY = convgen.UnionErr[X, Y](nil, convgen.RenameTrimPrefix("X", "Y"))
 
 func main() {
-	// Output: converting X: unknown type main.x1
+	// Output: converting X: unknown union impl main.x1: no match found
 	_, err := XtoY(x1{})
 	fmt.Println(err)
+
+	// Output: true
+	fmt.Println(errors.Is(err, convgenerrors.ErrNoMatch))
 }

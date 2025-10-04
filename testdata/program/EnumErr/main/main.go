@@ -3,9 +3,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sublee/convgen"
+	"github.com/sublee/convgen/pkg/convgenerrors"
 )
 
 type Foo int
@@ -24,6 +26,9 @@ func main() {
 	// Output: Unknown
 	fmt.Println(bar)
 
-	// Output: cannot convert Foo value 999 to Bar
+	// Output: unknown enum member 999: no match found
 	fmt.Println(err)
+
+	// Output: true
+	fmt.Println(errors.Is(err, convgenerrors.ErrNoMatch))
 }

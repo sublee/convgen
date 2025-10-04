@@ -4,9 +4,18 @@
 package convgenerrors
 
 import (
+	"errors"
 	"io"
 	"strings"
 )
+
+// ErrNoMatch is returned when an input value or type does not match any case or
+// member in the target type at runtime.
+//
+// It is used by convgen.UnionErr when the input type does not match any known
+// implementation, and by convgen.EnumErr when the input value does not match
+// any defined enum member.
+var ErrNoMatch = errors.New("no match found")
 
 // Wrap creates a new error that wraps err with a prefix indicating the object
 // being converted. The returned error message includes the conversion context.

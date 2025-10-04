@@ -195,7 +195,10 @@ func (as unionAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr st
 		if varErr != "" {
 			varConvgenErrors := w.Import("github.com/sublee/convgen/pkg/convgenerrors", "convgenerrors")
 			varFmt := w.Import("fmt", "fmt")
-			w.Printf("%s = %s.Wrap(\"%s\", %s.Errorf(\"unknown type %%T\", %s))\n", varErr, varConvgenErrors, as.x.QualName(), varFmt, varX)
+			w.Printf("%s = %s.Wrap(\"%s\", %s.Errorf(\"unknown union impl %%T: %%w\", %s, %s.ErrNoMatch))\n",
+				varErr, varConvgenErrors,
+				as.x.QualName(), varFmt,
+				varX, varConvgenErrors)
 		}
 	}
 

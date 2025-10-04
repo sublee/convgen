@@ -146,7 +146,10 @@ func (as enumAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr str
 		if varErr != "" {
 			varConvgenErrors := w.Import("github.com/sublee/convgen/pkg/convgenerrors", "convgenerrors")
 			varFmt := w.Import("fmt", "fmt")
-			w.Printf("%s = %s.Wrap(\"%s\", %s.Errorf(\"unknown value %%v\", %s))\n", varErr, varConvgenErrors, as.x.QualName(), varFmt, varX)
+			w.Printf("%s = %s.Wrap(\"%s\", %s.Errorf(\"unknown enum member %%v: %%w\", %s, %s.ErrNoMatch))\n",
+				varErr, varConvgenErrors,
+				as.x.QualName(), varFmt,
+				varX, varConvgenErrors)
 			as.errWrap.writeWrapCode(w, varErr)
 		}
 	}

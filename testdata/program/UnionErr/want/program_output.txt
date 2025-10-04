@@ -1,1 +1,2 @@
-converting X: unknown type main.x1
+converting X: unknown union impl main.x1: no match found
+true

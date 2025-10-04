@@ -19,10 +19,10 @@
 // and error-aware conversions for flexible adaptation to various use cases:
 //
 //	// source:
-//	var EncodeUser = convgen.Struct[model.User, pb.User](nil)
+//	var EncodeUser = convgen.Struct[model.User, api.User](nil)
 //
 //	// generated: (simplified)
-//	func EncodeUser(in model.User) (out pb.User) {
+//	func EncodeUser(in model.User) (out api.User) {
 //		out.Name = in.Name
 //		out.Email = in.Email
 //		return
@@ -36,19 +36,19 @@
 // # Configurations
 //
 // When field mappings are ambiguous or incomplete, Convgen reports detailed
-// diagnostics. For example, if our model.User has an ID field but pb.User has
+// diagnostics. For example, if our model.User has an ID field but api.User has
 // Id (with a lower case "d") instead, so they don't match exactly:
 //
-//	main.go:10:10: invalid match between model.User and pb.User
+//	main.go:10:10: invalid match between model.User and api.User
 //		FAIL: ID -> ?  // missing
 //		FAIL: ?  -> Id // missing
 //
 // Renaming rules can be applied to resolve those mismatches. In this case, we
-// can solve with just [RenameToLower]. It renames model.User.ID and pb.User.Id
+// can solve with just [RenameToLower]. It renames model.User.ID and api.User.Id
 // both to become "id":
 //
 //	// source:
-//	var EncodeUser = convgen.Struct[model.User, pb.User](nil,
+//	var EncodeUser = convgen.Struct[model.User, api.User](nil,
 //		convgen.RenameToLower(true, true),
 //	)
 //
@@ -60,8 +60,8 @@
 // in the future:
 //
 //	// source:
-//	var EncodeUser = convgen.Struct[model.User, pb.User](nil,
-//		convgen.Match(model.User{}.ID, pb.User{}.Id),
+//	var EncodeUser = convgen.Struct[model.User, api.User](nil,
+//		convgen.Match(model.User{}.ID, api.User{}.Id),
 //	)
 //
 // Note that many options have separate flags or arguments for input and output
@@ -77,26 +77,26 @@
 //	// source:
 //	var (
 //		enc = convgen.Module(convgen.RenameToLower(true, true))
-//		EncodeUser = convgen.Struct[model.User, pb.User](enc)
-//		EncodeRole = convgen.Enum[model.Role, pb.Role](enc, pb.Role_ROLE_UNSPECIFIED, convgen.RenameTrimCommonPrefix(true, true))
+//		EncodeUser = convgen.Struct[model.User, api.User](enc)
+//		EncodeRole = convgen.Enum[model.Role, api.Role](enc, api.ROLE_UNSPECIFIED, convgen.RenameTrimCommonPrefix(true, true))
 //	)
 //
 //	// generated: (simplified)
-//	func EncodeUser(in model.User) (out pb.User) {
+//	func EncodeUser(in model.User) (out api.User) {
 //		out.Name = in.Name
 //		out.Email = in.Email
 //		out.Role = EncodeRole(in.Role)
 //		           ^^^^^^^^^^^^^^^^^^^ // reused converter in the same module
 //		return
 //	}
-//	func EncodeRole(in model.Role) (out pb.Role) {
+//	func EncodeRole(in model.Role) (out api.Role) {
 //		switch in {
 //		case model.RoleAdmin:
-//			return pb.Role_ROLE_ADMIN
+//			return api.ROLE_ADMIN
 //		case model.RoleMember:
-//			return pb.Role_ROLE_MEMBER
+//			return api.ROLE_MEMBER
 //		default:
-//			return pb.Role_ROLE_UNSPECIFIED
+//			return api.ROLE_UNSPECIFIED
 //		}
 //	}
 //
@@ -105,17 +105,17 @@
 // However, a custom function can be used for any type conversion. A custom
 // function can be imported into a module by [ImportFunc].
 //
-// For example, when model.User.ID is int but pb.User.ID is string, a func(int)
+// For example, when model.User.ID is int but api.User.ID is string, a func(int)
 // string like strconv.Itoa can be imported to convert them:
 //
 //	// source:
 //	var (
 //		enc = convgen.Module(convgen.ImportFunc(strconv.Itoa))
-//		EncodeUser = convgen.Struct[model.User, pb.User](enc)
+//		EncodeUser = convgen.Struct[model.User, api.User](enc)
 //	)
 //
 //	// generated: (simplified)
-//	func EncodeUser(in model.User) (out pb.User) {
+//	func EncodeUser(in model.User) (out api.User) {
 //		out.ID = strconv.Itoa(in.ID)
 //		         ^^^^^^^^^^^^^^^^^^^ // custom conversion function
 //		out.Name = in.Name
@@ -130,20 +130,20 @@
 // can use other errorful converters in the same module. Custom errorful
 // conversion functions can be imported by [ImportFuncErr].
 //
-// In the above example, we could encode model.User to pb.User without any
+// In the above example, we could encode model.User to api.User without any
 // error. But the reverse is not possible because string to int conversion
-// (pb.User.ID to model.User.ID) may fail at runtime. So, we need to use the Err
-// variants:
+// (api.User.ID to model.User.ID) may fail at runtime. So, we need to use the
+// Err variants:
 //
 //	// source:
 //	var (
 //		dec = convgen.Module(convgen.ImportFuncErr(strconv.Atoi))
-//		DecodeUser = convgen.StructErr[pb.User, model.User](dec)
+//		DecodeUser = convgen.StructErr[api.User, model.User](dec)
 //	)
 //
 //	// generated: (simplified)
-//	func DecodeUser(in pb.User) (out model.User, err error) {
-//	                                             ^^^^^^^^^ // may return error
+//	func DecodeUser(in api.User) (out model.User, err error) {
+//	                                              ^^^^^^^^^ // may return error
 //		out.ID, err = strconv.Atoi(in.ID)
 //		        ^^^^^^^^^^^^^^^^^^^^^^^^^ // custom conversion function with error
 //		out.Name = in.Name
@@ -215,19 +215,20 @@ func ForEnum(opts ...forOption) Option[yes, no, no, no, no] {
 }
 
 // Struct directive generates a converter function between two struct types
-// without error.
+// without error:
 //
 //	// source:
-//	var convUser = convgen.Struct[User, pb.User](nil)
+//	var convUser = convgen.Struct[User, api.User](nil)
 //
 // The input and output types are declared as type parameters. The variable that
 // holds the directive is rewritten to the actual function when Convgen
 // generates code:
 //
 //	// generated: (simplified)
-//	func convUser(in User) (out pb.User) {
+//	func convUser(in User) (out api.User) {
 //		out.Name = in.Name
 //		out.Email = in.Email
+//		out.Address = convgen_Address_api_Address(in.Address) // subconverter implicitly generated
 //		return
 //	}
 //
@@ -244,29 +245,110 @@ func Struct[In, Out any](mod module, opts ...structOption) func(In) Out {
 }
 
 // StructErr is the error-returning variant of [Struct]. It generates a
-// converter function that returns (Out, error) instead of just Out. Unlike
-// [Struct], StructErr allows the generated converter to call other functions
-// within the same [Module] that may themselves return an error.
+// converter function that returns (Out, error) instead of just Out.
+//
+// Unlike [Struct], StructErr allows the generated converter to call other
+// functions within the same [Module] that may themselves return an error.
 func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }
 
-// Union marks a converter function between two interface types. It finds
-// implementations from the same package of each interface type or the sample
-// implementation specified by [DiscoverBySample]. The converter functions for
-// implementations have to be discoverable in the module.
+// Union directive generates a converter function between two interface types
+// without error:
+//
+//	// source:
+//	var convEvent = convgen.Union[Event, api.Event](nil)
+//
+// The input and output types are declared as type parameters. The variable that
+// holds the directive is rewritten to the actual function when Convgen
+// generates code:
+//
+//	// generated: (simplified)
+//	func convEvent(in Event) api.Event {
+//		switch in := in.(type) {
+//		case ClickEvent:
+//			return convgen_ClickEvent_api_ClickEvent(in) // subconverter implicitly generated
+//		case ScrollEvent:
+//			return convgen_ScrollEvent_api_ScrollEvent(in)
+//		}
+//		return nil
+//	}
+//
+// By default, Convgen discovers concrete implementations from the package that
+// defines each interface. When [DiscoverBySample] is used, Convgen finds
+// implementations from the package of the sample value instead.
+//
+// To customize conversions for each implementation, declare corresponding
+// converters within the same [Module]:
+//
+//	// source:
+//	var (
+//		mod             = convgen.Module()
+//		convEvent       = convgen.Union[Event, api.Event](mod)
+//		convClickEvent  = convgen.Struct[ClickEvent, api.ClickEvent](mod, ...)
+//		convScrollEvent = convgen.Struct[ScrollEvent, api.ScrollEvent](mod, ...)
+//	)
+//
+//	// generated: (simplified)
+//	func convEvent(in Event) api.Event {
+//		switch in := in.(type) {
+//		case ClickEvent:
+//			return convClickEvent(in)
+//		case ScrollEvent:
+//			return convScrollEvent(in)
+//		}
+//		return nil
+//	}
 func Union[In, Out any](mod module, opts ...unionOption) func(In) Out {
 	panic("convgen: not generated")
 }
 
+// UnionErr is the error-returning variant of [Union]. It generates a converter
+// function that returns (Out, error) instead of just Out. When there is no
+// match for the input implementation, it returns (nil,
+// convgenerrors.ErrNoMatch).
+//
+// Unlike [Union], UnionErr allows the generated converter to call other
+// functions within the same [Module] that may themselves return an error.
 func UnionErr[In, Out any](mod module, opts ...unionOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }
 
+// Enum directive generates a converter function between two enum types without
+// error. The default output member must be specified explicitly:
+//
+//	// source:
+//	var convStatus = convgen.Enum[Status, api.Status](nil, api.STATUS_UNSPECIFIED)
+//
+// The input and output types are declared as type parameters. The variable that
+// holds the directive is rewritten to the actual function when Convgen
+// generates code:
+//
+//	// generated: (simplified)
+//	func convStatus(in Status) api.Status {
+//		switch in {
+//		case StatusActive:
+//			return api.STATUS_ACTIVE
+//		case StatusInactive:
+//			return api.STATUS_INACTIVE
+//		default:
+//			return api.STATUS_UNSPECIFIED // default output member
+//		}
+//	}
+//
+// By default, Convgen discovers enum members (constant identifiers) from the
+// package that defines each enum type. When [DiscoverBySample] is used, Convgen
+// discovers members from the package of the sample value instead.
 func Enum[In, Out any](mod module, default_ Out, opts ...enumOption) func(In) Out {
 	panic("convgen: not generated")
 }
 
+// EnumErr is the error-returning variant of [Enum]. It generates a converter
+// function that returns (Out, error) instead of just Out. When there is no
+// match for the input value, it returns (unknown, convgenerrors.ErrNoMatch).
+//
+// Unlike [Enum], EnumErr allows the generated converter to call other functions
+// within the same [Module] that may themselves return an error.
 func EnumErr[In, Out any](mod module, default_ Out, opts ...enumOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }

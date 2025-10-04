@@ -16,10 +16,10 @@ import (
 // enumAssigner assigns an enum type to another enum type by matching enum
 // members.
 type enumAssigner struct {
-	x, y    Object
-	unknown *types.Const
-	pairs   [][2]enumMember
-	errWrap *errWrapAssigner
+	x, y     Object
+	default_ *types.Const
+	pairs    [][2]enumMember
+	errWrap  *errWrapAssigner
 }
 
 // requiresErr always returns false.
@@ -27,13 +27,13 @@ func (as enumAssigner) requiresErr() bool { return false }
 
 // tryEnum tries to create an [enumAssigner] from x to y by matching enum
 // members.
-func (fac *factory) tryEnum(x, y Object, unknown *types.Const) (*enumAssigner, error) {
+func (fac *factory) tryEnum(x, y Object, default_ *types.Const) (*enumAssigner, error) {
 	if !x.Type().IsBasic() || !y.Type().IsBasic() {
 		return nil, skip
 	}
 
-	if !types.Identical(unknown.Type(), y.Type().Type()) {
-		return nil, codefmt.Errorf(fac, unknown, "unknown must be of type %t, but got %t", y, unknown)
+	if !types.Identical(default_.Type(), y.Type().Type()) {
+		return nil, codefmt.Errorf(fac, default_, "default must be of type %t, but got %t", y, default_)
 	}
 
 	m := match.NewMatcher[enumMember](fac.inj, fac.cfg, x, y)
@@ -43,7 +43,7 @@ func (fac *factory) tryEnum(x, y Object, unknown *types.Const) (*enumAssigner, e
 		x:   x,
 		y:   y,
 	})
-	m.SetUnknownY(unknown.Pos())
+	m.SetDefaultY(default_.Pos())
 
 	matches, err := m.Match()
 	errs = errors.Join(errs, err)
@@ -57,11 +57,11 @@ func (fac *factory) tryEnum(x, y Object, unknown *types.Const) (*enumAssigner, e
 		pairs[i][1] = pair.Y
 	}
 	return &enumAssigner{
-		x:       x,
-		y:       y,
-		unknown: unknown,
-		pairs:   pairs,
-		errWrap: fac.newErrWrap(),
+		x:        x,
+		y:        y,
+		default_: default_,
+		pairs:    pairs,
+		errWrap:  fac.newErrWrap(),
 	}, nil
 }
 
@@ -142,7 +142,7 @@ func (d enumDiscovery) resolve(enum Object, path parse.Path) (enumMember, string
 // writeAssignCode writes code that assigns X to Y by enum member matching.
 func (as enumAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr string) {
 	printErr := func() {
-		w.Printf("%s = %o\n", varY, as.unknown)
+		w.Printf("%s = %o\n", varY, as.default_)
 		if varErr != "" {
 			varConvgenErrors := w.Import("github.com/sublee/convgen/pkg/convgenerrors", "convgenerrors")
 			varFmt := w.Import("fmt", "fmt")

@@ -2,7 +2,7 @@ main/main.go:26:24: invalid match between Status and STATUS
 	FAIL: _P_E_N_D_I_N_G_ [Pending]          -> ?                                      // missing
 	FAIL: _I_N_P_R_O_G_R_E_S_S_ [InProgress] -> ?                                      // missing
 	FAIL: _D_O_N_E_ [Done]                   -> ?                                      // missing
-	ok:   ?                                  -> STATUSUNSPECIFIED [STATUS_UNSPECIFIED] // unknown value may be missing
+	ok:   ?                                  -> STATUSUNSPECIFIED [STATUS_UNSPECIFIED] // missing allowed as default
 	FAIL: ?                                  -> PENDING                                // missing
 	FAIL: ?                                  -> INPROGRESS [IN_PROGRESS]               // missing
 	FAIL: ?                                  -> DONE                                   // missing

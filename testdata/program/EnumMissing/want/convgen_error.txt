@@ -1,6 +1,6 @@
 main/main.go:25:16: invalid match between Foo and Bar
 	FAIL: FooA -> ?          // missing
 	FAIL: FooB -> ?          // missing
-	ok:   ?    -> BarUnknown // unknown value may be missing
+	ok:   ?    -> BarUnknown // missing allowed as default
 	FAIL: ?    -> BarA       // missing
 	FAIL: ?    -> BarB       // missing

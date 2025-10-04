@@ -188,17 +188,17 @@ ok:   ?          .. C [clementine] // skipped missing at -:-
 `), v)
 }
 
-func TestUnknown(t *testing.T) {
+func TestDefault(t *testing.T) {
 	m := match.NewMatcher[Obj](anInj, parse.Config{}, dummy, dummy)
 	m.AddX(Obj{1, "fruit.apple"}, "A")
 	m.AddY(Obj{2, "person.alice"}, "A")
 	m.AddY(Obj{3, "person.bob"}, "B")
-	m.SetUnknownY(3)
+	m.SetDefaultY(3)
 
 	v := m.Visualize()
 	assert.Contains(t, ss(v), ss(`
 ok:   A [apple] -> A [alice]
-ok:   ?         -> B [bob] // unknown value may be missing
+ok:   ?         -> B [bob] // missing allowed as default
 `), v)
 }
 

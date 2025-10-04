@@ -283,11 +283,11 @@ func UnionErr[In, Out any](mod module, opts ...unionErrOption) func(In) (Out, er
 	panic("convgen: not generated")
 }
 
-func Enum[In, Out any](mod module, unknown Out, opts ...enumOption) func(In) Out {
+func Enum[In, Out any](mod module, default_ Out, opts ...enumOption) func(In) Out {
 	panic("convgen: not generated")
 }
 
-func EnumErr[In, Out any](mod module, unknown Out, opts ...enumErrOption) func(In) (Out, error) {
+func EnumErr[In, Out any](mod module, default_ Out, opts ...enumErrOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }
 

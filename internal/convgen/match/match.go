@@ -31,10 +31,10 @@ type Matcher[T object] struct {
 
 	xs, ys *indexer[T]
 
-	unknownPosY token.Pos
-	forced      *bidiMultiMap[token.Pos, token.Pos] // posXs <-> posYs
-	forcedAt    map[[2]token.Pos]token.Pos          // [posX, posY] -> where convgen.Match is called
-	skippedAt   *linkedhashmap.Map                  // [posX, posY] -> where convgen.MatchSkip is called in order
+	defaultY  token.Pos
+	forced    *bidiMultiMap[token.Pos, token.Pos] // posXs <-> posYs
+	forcedAt  map[[2]token.Pos]token.Pos          // [posX, posY] -> where convgen.Match is called
+	skippedAt *linkedhashmap.Map                  // [posX, posY] -> where convgen.MatchSkip is called in order
 
 	renamersX, renamersY           []renameFunc
 	commonFindersX, commonFindersY []findCommonFunc
@@ -91,9 +91,9 @@ func (m *Matcher[T]) DeleteX(pos token.Pos) { m.xs.delete(pos) }
 // DeleteY deletes a Y with the given name.
 func (m *Matcher[T]) DeleteY(pos token.Pos) { m.ys.delete(pos) }
 
-// UnknownY marks the given name as the default value of Y.
-// NOTE: We don't need UnknownX because X is always known.
-func (m *Matcher[T]) SetUnknownY(pos token.Pos) { m.unknownPosY = pos }
+// SetDefaultY sets the position of the default Y value.
+// NOTE: We don't need SetDefaultX because X is always known.
+func (m *Matcher[T]) SetDefaultY(pos token.Pos) { m.defaultY = pos }
 
 func (m *Matcher[T]) Force(posX, posY, at token.Pos) {
 	m.forced.Add(posX, posY)
@@ -186,7 +186,7 @@ func (m *Matcher[T]) ruleForced(xs, ys index, ln *links, vis *visualizer) {
 
 // ruleMissing classifies unmatched pairs:
 // - convgen.MatchSkip(convgen.Missing) -> ok: skip missing
-// - convgen.Enum(mod, y) -> ok: unknown value may be missing
+// - convgen.Enum(mod, y) -> ok: missing allowed as default
 // - otherwise -> FAIL: missing
 func (m *Matcher[T]) ruleMissing(xs, ys index, ln *links, vis *visualizer) {
 	for _, x := range xs.All {
@@ -204,8 +204,8 @@ func (m *Matcher[T]) ruleMissing(xs, ys index, ln *links, vis *visualizer) {
 			if pos, ok := m.skippedAt.Get([2]token.Pos{token.NoPos, y.Pos()}); ok {
 				reason := codefmt.Sprintf(m, "skipped missing at %b", pos)
 				vis.Skip(missing, y, reason)
-			} else if y.Pos() == m.unknownPosY {
-				vis.Match(missing, y, "unknown value may be missing")
+			} else if y.Pos() == m.defaultY {
+				vis.Match(missing, y, "missing allowed as default")
 			} else {
 				vis.MatchFail(missing, y, "missing")
 			}

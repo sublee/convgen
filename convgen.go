@@ -241,10 +241,13 @@ func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, err
 }
 
 // Union directive generates a converter function between two interface types
-// without error:
+// without error: Typically, union implementations share a common suffix, so
+// [RenameTrimCommonSuffix] is often used to match them:
 //
 //	// source:
-//	var convEvent = convgen.Union[Event, api.Event](nil)
+//	var convEvent = convgen.Union[Event, api.Event](nil,
+//		convgen.RenameTrimCommonSuffix(true, true),
+//	)
 //
 // The input and output types are declared as type parameters. The variable that
 // holds the directive is rewritten to the actual function when Convgen
@@ -254,9 +257,9 @@ func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, err
 //	func convEvent(in Event) api.Event {
 //		switch in := in.(type) {
 //		case ClickEvent:
-//			return convgen_ClickEvent_api_ClickEvent(in) // subconverter implicitly generated
+//			return convgen_ClickEvent_api_ClickEvt(in) // subconverter implicitly generated
 //		case ScrollEvent:
-//			return convgen_ScrollEvent_api_ScrollEvent(in)
+//			return convgen_ScrollEvent_api_ScrollEvt(in)
 //		}
 //		return nil
 //	}
@@ -272,8 +275,8 @@ func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, err
 //	var (
 //		mod             = convgen.Module()
 //		convEvent       = convgen.Union[Event, api.Event](mod)
-//		convClickEvent  = convgen.Struct[ClickEvent, api.ClickEvent](mod, ...)
-//		convScrollEvent = convgen.Struct[ScrollEvent, api.ScrollEvent](mod, ...)
+//		convClickEvent  = convgen.Struct[ClickEvent, api.ClickEvt](mod, ...)
+//		convScrollEvent = convgen.Struct[ScrollEvent, api.ScrollEvt](mod, ...)
 //	)
 //
 //	// generated: (simplified)
@@ -302,10 +305,14 @@ func UnionErr[In, Out any](mod module, opts ...unionOption) func(In) (Out, error
 }
 
 // Enum directive generates a converter function between two enum types without
-// error. The default output member must be specified explicitly:
+// error. The default output member must be specified explicitly. Typically,
+// enum members share a common prefix, so [RenameTrimCommonPrefix] is often used
+// to match them:
 //
 //	// source:
-//	var convStatus = convgen.Enum[Status, api.Status](nil, api.STATUS_UNSPECIFIED)
+//	var convStatus = convgen.Enum[Status, api.Status](nil, api.STATUS_UNSPECIFIED,
+//		convgen.RenameTrimCommonPrefix(true, true),
+//	)
 //
 // The input and output types are declared as type parameters. The variable that
 // holds the directive is rewritten to the actual function when Convgen
@@ -315,9 +322,9 @@ func UnionErr[In, Out any](mod module, opts ...unionOption) func(In) (Out, error
 //	func convStatus(in Status) api.Status {
 //		switch in {
 //		case StatusActive:
-//			return api.STATUS_ACTIVE
+//			return api.STATUS_Active
 //		case StatusInactive:
-//			return api.STATUS_INACTIVE
+//			return api.STATUS_Inactive
 //		default:
 //			return api.STATUS_UNSPECIFIED // default output member
 //		}

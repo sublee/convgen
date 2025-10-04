@@ -173,31 +173,13 @@ type (
 	forOption interface{ forOption() yes }
 
 	// option for [Struct] and [StructErr]
-	structOption interface {
-		structOption() yes
-		structErrOption
-	}
+	structOption interface{ structOption() yes }
 
 	// option for [Union] and [UnionErr]
-	unionOption interface {
-		unionOption() yes
-		unionErrOption
-	}
+	unionOption interface{ unionOption() yes }
 
 	// option for [Enum] and [EnumErr]
-	enumOption interface {
-		enumOption() yes
-		enumErrOption
-	}
-
-	// option for [StructErr]
-	structErrOption interface{ structErrOption() yes }
-
-	// option for [UnionErr]
-	unionErrOption interface{ unionErrOption() yes }
-
-	// option for [EnumErr]
-	enumErrOption interface{ enumErrOption() yes }
+	enumOption interface{ enumOption() yes }
 )
 
 // Module provides a shared namespace of underlying converters to make them
@@ -263,7 +245,7 @@ func Struct[In, Out any](mod module, opts ...structOption) func(In) Out {
 // In the above example, XtoY will be generated as a function of func(X) (Y,
 // error). It matches fields by name unless specified otherwise by [Match] or
 // related matching options.
-func StructErr[In, Out any](mod module, opts ...structErrOption) func(In) (Out, error) {
+func StructErr[In, Out any](mod module, opts ...structOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }
 
@@ -275,11 +257,7 @@ func Union[In, Out any](mod module, opts ...unionOption) func(In) Out {
 	panic("convgen: not generated")
 }
 
-// UnionErr marks a converter function between two interface types. It finds
-// implementations from the same package of each interface type or the sample
-// implementation specified by [DiscoverBySample]. The converter functions for
-// implementations have to be discoverable in the module.
-func UnionErr[In, Out any](mod module, opts ...unionErrOption) func(In) (Out, error) {
+func UnionErr[In, Out any](mod module, opts ...unionOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }
 
@@ -287,7 +265,7 @@ func Enum[In, Out any](mod module, default_ Out, opts ...enumOption) func(In) Ou
 	panic("convgen: not generated")
 }
 
-func EnumErr[In, Out any](mod module, default_ Out, opts ...enumErrOption) func(In) (Out, error) {
+func EnumErr[In, Out any](mod module, default_ Out, opts ...enumOption) func(In) (Out, error) {
 	panic("convgen: not generated")
 }
 
@@ -297,9 +275,6 @@ type Option[Module, For, Struct, Union, Enum canUseFor] interface {
 	structOption() Struct
 	unionOption() Union
 	enumOption() Enum
-	structErrOption() Struct
-	unionErrOption() Union
-	enumErrOption() Enum
 }
 
 // ImportFunc is an option which registers a custom errorless converter function

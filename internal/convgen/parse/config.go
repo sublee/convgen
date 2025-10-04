@@ -759,6 +759,10 @@ func (p *Parser) ParseOptionDiscoverBySample(c *Config, call *ast.CallExpr, ps p
 		return errs
 	}
 
+	if pkgX == nil && pkgY == nil {
+		return codefmt.Errorf(p, call, "cannot use nil for both parameters")
+	}
+
 	c.DiscoverBySampleEnabled = true
 	if pkgX != nil {
 		c.DiscoverBySamplePkgX = pkgX

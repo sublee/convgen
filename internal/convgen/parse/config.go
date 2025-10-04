@@ -257,6 +257,10 @@ func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error 
 		return p.ParseOptionRenameCommon(cfg, call, lcs.CommonPrefix, strings.TrimPrefix)
 	case "RenameTrimCommonSuffix":
 		return p.ParseOptionRenameCommon(cfg, call, lcs.CommonSuffix, strings.TrimSuffix)
+	case "RenameTrimCommonWordPrefix":
+		return p.ParseOptionRenameCommon(cfg, call, lcs.CommonWordPrefix, strings.TrimPrefix)
+	case "RenameTrimCommonWordSuffix":
+		return p.ParseOptionRenameCommon(cfg, call, lcs.CommonWordSuffix, strings.TrimSuffix)
 	case "RenameReset":
 		return p.ParseOptionRenameReset(cfg, call)
 
@@ -281,7 +285,7 @@ func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error 
 		return p.ParseOptionDiscoverNested(cfg, call, ps)
 	}
 
-	return codefmt.Errorf(p, call.Fun, "%s is not supported option (convgen )", name)
+	return codefmt.Errorf(p, call.Fun, "%s is not supported option", name)
 }
 
 func (p *Parser) ParseOptionImportFunc(c *Config, call *ast.CallExpr, hasErr bool) error {

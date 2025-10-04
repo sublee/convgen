@@ -1,6 +1,7 @@
 package match
 
 import (
+	"cmp"
 	"go/token"
 	"io"
 	"maps"
@@ -143,11 +144,5 @@ func cmpValidWinsInvalid(a, b token.Pos) int {
 }
 
 func cmpAboveWinsBelow(a, b token.Pos) int {
-	if a < b {
-		return -1
-	}
-	if a > b {
-		return 1
-	}
-	return 0
+	return cmp.Compare(a, b)
 }

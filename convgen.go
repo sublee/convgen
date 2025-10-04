@@ -374,6 +374,18 @@ func RenameTrimCommonSuffix(inEnable, outEnable bool) Option[yes, yes, yes, yes,
 	panic("convgen: not generated")
 }
 
+// RenameTrimCommonWordPrefix is a renaming option that registers a renaming rule that
+// trims the longest common prefix for matching names based on word boundaries
+func RenameTrimCommonWordPrefix(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
+	panic("convgen: not generated")
+}
+
+// RenameTrimCommonWordSuffix is a renaming option that registers a renaming rule that
+// trims the longest common suffix for matching names based on word boundaries.
+func RenameTrimCommonWordSuffix(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
+	panic("convgen: not generated")
+}
+
 // RenameReset is a renaming option that clears all the renaming rules
 // registered so far.
 func RenameReset(inCancel, outCancel bool) Option[yes, yes, yes, yes, yes] {

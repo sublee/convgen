@@ -201,18 +201,6 @@ func Module(opts ...moduleOption) module {
 	panic("convgen: not generated")
 }
 
-func ForStruct(opts ...forOption) Option[yes, no, no, no, no] {
-	panic("convgen: not generated")
-}
-
-func ForUnion(opts ...forOption) Option[yes, no, no, no, no] {
-	panic("convgen: not generated")
-}
-
-func ForEnum(opts ...forOption) Option[yes, no, no, no, no] {
-	panic("convgen: not generated")
-}
-
 // Struct directive generates a converter function between two struct types
 // without error:
 //
@@ -355,15 +343,15 @@ func EnumErr[In, Out any](mod module, default_ Out, opts ...enumOption) func(In)
 // Option configures how converters are generated. They are categorized by their
 // prefix:
 //
-//   - Import: Registers a custom conversion function or error wrapper so that
-//     converters in the module can use them.
 //   - Discover: Configures how Convgen discovers targets such as fields,
 //     implementations, or enum members.
+//   - Import: Registers a custom conversion function or error wrapper so that
+//     converters in the module can use them.
+//   - Match: Manually matches or skips a specific pair, optionally with a
+//     custom matcher function.
 //   - Rename: Appends or resets renaming rules before matching fields,
 //     implementations, or members. The rules are applied in the order they are
 //     registered.
-//   - Match: Manually matches or skips a specific pair, optionally with a
-//     custom matcher function.
 //
 // For-prefixed options are meta-options that restrict where the registered
 // options apply. For example, an option registered with [ForStruct] affects
@@ -388,6 +376,18 @@ type Option[Module, For, Struct, Union, Enum canUseFor] interface {
 	structOption() Struct
 	unionOption() Union
 	enumOption() Enum
+}
+
+func ForStruct(opts ...forOption) Option[yes, no, no, no, no] {
+	panic("convgen: not generated")
+}
+
+func ForUnion(opts ...forOption) Option[yes, no, no, no, no] {
+	panic("convgen: not generated")
+}
+
+func ForEnum(opts ...forOption) Option[yes, no, no, no, no] {
+	panic("convgen: not generated")
 }
 
 // ImportFunc is an option which registers a custom errorless converter function
@@ -570,11 +570,22 @@ func MatchSkip(inPath, outPath Path) Option[no, no, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// DiscoverBySample is a converter-level option which specifies a sample of
-// items. Convgen will look up other items from the same package of the given
-// sample.
+// DiscoverBySample enables Convgen to discover matching items from the package
+// of the given sample value.
 //
-// Accepted by [Union], [UnionErr], [Enum], and [EnumErr].
+// When implementations or constants are declared in a package different from
+// where the type itself is defined, this option allows Convgen to locate and
+// match them. When enabled, Convgen ignores items declared in the package of
+// the type and instead searches in the package of the sample value.
+//
+//	// source:
+//	var convAnimal = convgen.Union[Animal, api.Animal](mod,
+//		convgen.DiscoverBySample(impls.Cat{}, nil), // discover Animal implementations in impls package
+//	)
+//
+// This option cannot be specified more than once for the same converter. At
+// least one argument must be non-nil; a nil argument means to keep the default
+// discovery behavior for that corresponding type.
 func DiscoverBySample(inSample, outSample Path) Option[no, no, yes, yes, no] {
 	panic("convgen: not generated")
 }

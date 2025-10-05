@@ -838,34 +838,38 @@ func DiscoverNested(inPath, outPath Path) Option[no, no, yes, no, no] {
 	panic("convgen: not generated")
 }
 
-// FieldGetter wraps an errorless getter function (func() y) in [MatchFunc] or
-// [MatchFuncErr]. This helps to resolve type errors.
+// FieldGetter casts func() In to In. This helps resolve type errors in
+// [MatchFunc] or [MatchFuncErr] when the specified field is accessed by a
+// getter method:
 //
-//	convgen.Struct[X, Y](mod,
-//		convgen.WireMapFunc(convgen.FieldGetter(X{}.Name), Y{}.Name, rename),
+//	convgen.Struct[User, api.User](nil,
+//		convgen.MatchFunc(convgen.FieldGetter(User{}.GetName), api.User{}.Name, rename),
 //	)
 func FieldGetter[In any](fn func() In) In { return *new(In) }
 
-// FieldGetterErr wraps an errorful getter function (func() (y, error)) in
-// [MatchFunc] or [MatchFuncErr]. This helps to resolve type errors.
+// FieldGetterErr casts func() (In, error) to In. This helps resolve type errors
+// in [MatchFunc] or [MatchFuncErr] when the specified field is a getter method
+// that returns an error:
 //
-//	convgen.StructErr[X, Y](mod,
-//		convgen.WireMapFunc(convgen.FieldGetterErr(X{}.Name), Y{}.Name, rename),
+//	convgen.StructErr[User, api.User](nil,
+//		convgen.MatchFunc(convgen.FieldGetterErr(User{}.GuessAddress), api.User{}.Address, normalizeAddress),
 //	)
 func FieldGetterErr[In any](fn func() (In, error)) In { return *new(In) }
 
-// FieldSetter wraps an errorless setter function (func(x)) in [MatchFunc] or
-// [MatchFuncErr]. This helps to resolve type errors.
+// FieldSetter casts func(Out) to Out. This helps resolve type errors in
+// [MatchFunc] or [MatchFuncErr] when the specified field is assigned through a
+// setter method:
 //
-//	convgen.Struct[X, Y](mod,
-//		convgen.WireMapFunc(X{}.Name, convgen.FieldSetter((*Y)(nil).SetName), rename),
+//	convgen.Struct[User, api.User](nil,
+//		convgen.MatchFunc(User{}.Name, convgen.FieldSetter((&api.User).SetName), rename),
 //	)
 func FieldSetter[Out any](fn func(Out)) Out { return *new(Out) }
 
-// FieldSetterErr wraps an errorful setter function (func(x) error) in [MatchFunc]
-// or [MatchFuncErr]. This helps to resolve type errors.
+// FieldSetterErr casts func(Out) error to Out. This helps resolve type errors
+// in [MatchFunc] or [MatchFuncErr] when the specified field is assigned through
+// a setter method that returns an error:
 //
-//	convgen.StructErr[X, Y](mod,
-//		convgen.WireMapFunc(X{}.Name, convgen.FieldSetterErr((*Y)(nil).SetName), rename),
+//	convgen.StructErr[User, api.User](nil,
+//		convgen.MatchFunc(User{}.Address, convgen.FieldSetterErr((&api.User).AppendAddress), normalizeAddress),
 //	)
 func FieldSetterErr[Out any](fn func(Out) error) Out { return *new(Out) }

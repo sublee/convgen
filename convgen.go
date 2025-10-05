@@ -583,16 +583,17 @@ func MatchSkip(inPath, outPath Path) Option[no, no, yes, yes, yes] {
 // When implementations or constants are declared in a package different from
 // where the type itself is defined, this option allows Convgen to locate and
 // match them. When enabled, Convgen ignores items declared in the package of
-// the type and instead searches in the package of the sample value.
+// the type and instead searches in the package of the sample value:
 //
 //	// source:
 //	var convAnimal = convgen.Union[Animal, api.Animal](mod,
 //		convgen.DiscoverBySample(impls.Cat{}, nil), // discover Animal implementations in impls package
 //	)
 //
-// This option cannot be specified more than once for the same converter. At
-// least one argument must be non-nil; a nil argument means to keep the default
-// discovery behavior for that corresponding type.
+// At least one argument must be non-nil; a nil argument means to keep the
+// default discovery behavior for that corresponding type.
+//
+// When this option is specified multiple times, the last one takes effect.
 func DiscoverBySample(inSample, outSample Path) Option[no, no, yes, yes, no] {
 	panic("convgen: not generated")
 }
@@ -612,23 +613,103 @@ func DiscoverUnexported(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes
 	panic("convgen: not generated")
 }
 
-// DiscoverGetters enables to match getter methods to access fields in a struct.
+// DiscoverGetters enables discovery of getter methods for reading fields of an
+// input struct. A getter method has one of the following forms:
 //
-//	// Generate: b.ID = a.GetID()
-//	convgen.Struct[A, B](mod, convgen.DiscoverGetters(true, "Get", ""))
+//	func (T) PrefixFieldNameSuffix() FieldType
+//	func (T) PrefixFieldNameSuffix() (FieldType, error)
 //
-// Accepted by [Module], [Struct], and [StructErr].
-func DiscoverGetters(enable bool, prefix, suffix string) Option[yes, yes, yes, no, no] {
+// The prefix and suffix parameter control how getter names are formed, and the
+// empty string is allowed for either. When matching to output fields, Convgen
+// trims the prefix and suffix from the method name:
+//
+//	// source:
+//	type User struct{ name string }
+//	func (u User) GetName() string { return u.name }
+//	var convUser = convgen.Struct[User, api.User](nil,
+//		convgen.DiscoverGetters("Get", ""),
+//	)
+//
+//	// generated (simplified):
+//	func convUser(in User) (out api.User) {
+//		out.Name = in.GetName()
+//		return
+//	}
+//
+// This option can also be set at the module level to apply to all struct
+// converters within the module, which is useful when most structs follow a
+// getter naming convention:
+//
+//	// source:
+//	var mod = convgen.Module(convgen.DiscoverGetters("Get", ""))
+//	var convUser = convgen.Struct[User, api.User](mod)
+//
+// In that case, use [DiscoverFieldsOnly] to disable getter discovery for
+// specific struct converters that do not have getters.
+//
+// When this option is specified multiple times, the last one takes effect.
+func DiscoverGetters(prefix, suffix string) Option[yes, yes, yes, no, no] {
 	panic("convgen: not generated")
 }
 
-// DiscoverSetters enables to match setter methods to set fields in a struct.
+// DiscoverSetters enables discovery of setter methods for writing fields of an
+// output struct. A setter method has one of the following forms:
 //
-//	// Generate: b.SetID(a.ID)
-//	convgen.Struct[A, B](mod, convgen.DiscoverSetters(true, "Set", ""))
+//	func (*T) PrefixFieldNameSuffix(v FieldType)
+//	func (*T) PrefixFieldNameSuffix(v FieldType) error
 //
-// Accepted by [Module], [Struct], and [StructErr].
-func DiscoverSetters(enable bool, prefix, suffix string) Option[yes, yes, yes, no, no] {
+// The prefix and suffix parameter control how setter names are formed, and the
+// empty string is allowed for either. When matching to input fields, Convgen
+// trims the prefix and suffix from the method name:
+//
+//	// source:
+//	type User struct{ name string }
+//	func (u *User) SetName(v string) { u.name = v }
+//	var convUser = convgen.Struct[api.User, User](nil,
+//		convgen.DiscoverSetters("Set", ""),
+//	)
+//
+//	// generated (simplified):
+//	func convUser(in api.User) (out User) {
+//		out.SetName(in.Name)
+//		return
+//	}
+//
+// This option can also be set at the module level to apply to all struct
+// converters within the module, which is useful when most structs follow a
+// setter naming convention:
+//
+//	// source:
+//	var mod = convgen.Module(convgen.DiscoverSetters("Set", ""))
+//	var convUser = convgen.Struct[api.User, User](mod)
+//
+// In that case, use [DiscoverFieldsOnly] to disable setter discovery for
+// specific struct converters that do not have setters.
+//
+// When this option is specified multiple times, the last one takes effect.
+func DiscoverSetters(prefix, suffix string) Option[yes, yes, yes, no, no] {
+	panic("convgen: not generated")
+}
+
+// DiscoverFieldsOnly disables previously registered [DiscoverGetters] and
+// [DiscoverSetters] options so that Convgen discovers only struct fields.
+//
+// Because getter and setter discovery can be enabled at the module level, this
+// option is useful for overriding them for specific struct converters.
+//
+//	// source:
+//	var (
+//		mod      = convgen.Module(convgen.DiscoverGetters("Get", ""))
+//		convUser = convgen.Struct[User, api.User](mod)
+//	)
+//
+//	// Address does not have getters unlike other structs
+//	var convAddress = convgen.Struct[Address, api.Address](mod,
+//		convgen.DiscoverFieldsOnly(true, false),
+//	)
+//
+// When this option is specified multiple times, the last one takes effect.
+func DiscoverFieldsOnly(inEnable, outEnable bool) Option[yes, yes, yes, no, no] {
 	panic("convgen: not generated")
 }
 

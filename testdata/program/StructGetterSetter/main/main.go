@@ -30,20 +30,20 @@ func neg(x int) int { return -x }
 
 var (
 	ConvGetter = convgen.Struct[Getter, Field](nil,
-		convgen.DiscoverGetters(true, "", ""),
+		convgen.DiscoverGetters("", ""),
 		convgen.MatchSkip(Getter{}.GetValue, nil),
 		convgen.MatchSkip(Getter{}.ValueGetter, nil),
 		convgen.MatchSkip(Getter{}.DoValueRetrieval, nil),
 		convgen.MatchSkip(Getter{}.ValueErr, nil),
 	)
 	ConvGetterPrefix = convgen.Struct[Getter, Field](nil,
-		convgen.DiscoverGetters(true, "Get", ""),
+		convgen.DiscoverGetters("Get", ""),
 	)
 	ConvGetterSuffix = convgen.Struct[Getter, Field](nil,
-		convgen.DiscoverGetters(true, "", "Getter"),
+		convgen.DiscoverGetters("", "Getter"),
 	)
 	ConvGetterPrefixSuffix = convgen.Struct[Getter, Field](nil,
-		convgen.DiscoverGetters(true, "Do", "Retrieval"),
+		convgen.DiscoverGetters("Do", "Retrieval"),
 	)
 	ConvGetterMatch = convgen.Struct[Getter, Field](nil,
 		convgen.Match(convgen.FieldGetter(Getter{}.Value), Field{}.Value),
@@ -52,32 +52,32 @@ var (
 		convgen.MatchFunc(convgen.FieldGetter(Getter{}.Value), Field{}.Value, neg),
 	)
 	ConvGetterErr = convgen.StructErr[Getter, Field](nil,
-		convgen.DiscoverGetters(true, "", "Err"),
+		convgen.DiscoverGetters("", "Err"),
 	)
 )
 
 var (
 	ConvSetter = convgen.Struct[Field, Setter](nil,
-		convgen.DiscoverSetters(true, "", ""),
+		convgen.DiscoverSetters("", ""),
 		convgen.MatchSkip(nil, (*Setter)(nil).SetValue),
 		convgen.MatchSkip(nil, (*Setter)(nil).ValueSetter),
 		convgen.MatchSkip(nil, (*Setter)(nil).DoValueUpdate),
 		convgen.MatchSkip(nil, (*Setter)(nil).ValueErr),
 	)
 	ConvSetterPrefix = convgen.Struct[Field, Setter](nil,
-		convgen.DiscoverSetters(true, "Set", ""),
+		convgen.DiscoverSetters("Set", ""),
 	)
 	ConvSetterSuffix = convgen.Struct[Field, Setter](nil,
-		convgen.DiscoverSetters(true, "", "Setter"),
+		convgen.DiscoverSetters("", "Setter"),
 	)
 	ConvSetterPrefixSuffix = convgen.Struct[Field, Setter](nil,
-		convgen.DiscoverSetters(true, "Do", "Update"),
+		convgen.DiscoverSetters("Do", "Update"),
 	)
 	ConvSetterMatch = convgen.Struct[Field, Setter](nil,
 		convgen.Match(Field{}.Value, (*Setter)(nil).Value),
 	)
 	ConvSetterErr = convgen.StructErr[Field, Setter](nil,
-		convgen.DiscoverSetters(true, "", "Err"),
+		convgen.DiscoverSetters("", "Err"),
 	)
 )
 

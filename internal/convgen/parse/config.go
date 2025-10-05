@@ -281,6 +281,8 @@ func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error 
 		return p.ParseOptionDiscoverGetters(cfg, call)
 	case "DiscoverSetters":
 		return p.ParseOptionDiscoverSetters(cfg, call)
+	case "DiscoverFieldsOnly":
+		return p.ParseOptionDiscoverFieldsOnly(cfg, call)
 	case "DiscoverNested":
 		return p.ParseOptionDiscoverNested(cfg, call, ps)
 	}
@@ -459,16 +461,9 @@ func (p *Parser) ParseOptionDiscoverUnexported(c *Config, call *ast.CallExpr) er
 }
 
 func (p *Parser) ParseOptionDiscoverGetters(c *Config, call *ast.CallExpr) error {
-	enable, prefix, suffix, err := parseArgs3[bool, string, string](p, call)
+	prefix, suffix, err := parseArgs2[string, string](p, call)
 	if err != nil {
 		return err
-	}
-
-	if !enable {
-		c.DiscoverGettersEnabled = false
-		c.DiscoverGettersPrefix = ""
-		c.DiscoverGettersSuffix = ""
-		return nil
 	}
 
 	c.DiscoverGettersEnabled = true
@@ -478,20 +473,37 @@ func (p *Parser) ParseOptionDiscoverGetters(c *Config, call *ast.CallExpr) error
 }
 
 func (p *Parser) ParseOptionDiscoverSetters(c *Config, call *ast.CallExpr) error {
-	enable, prefix, suffix, err := parseArgs3[bool, string, string](p, call)
+	prefix, suffix, err := parseArgs2[string, string](p, call)
 	if err != nil {
 		return err
-	}
-
-	if !enable {
-		c.DiscoverSettersEnabled = false
-		c.DiscoverSettersPrefix = ""
-		c.DiscoverSettersSuffix = ""
 	}
 
 	c.DiscoverSettersEnabled = true
 	c.DiscoverSettersPrefix = prefix
 	c.DiscoverSettersSuffix = suffix
+	return nil
+}
+
+func (p *Parser) ParseOptionDiscoverFieldsOnly(c *Config, call *ast.CallExpr) error {
+	x, y, err := parseArgs2[bool, bool](p, call)
+	if err != nil {
+		return err
+	}
+
+	if !x && !y {
+		return codefmt.Errorf(p, call, "at least one parameter must be true")
+	}
+
+	if x {
+		c.DiscoverGettersEnabled = false
+		c.DiscoverGettersPrefix = ""
+		c.DiscoverGettersSuffix = ""
+	}
+	if y {
+		c.DiscoverSettersEnabled = false
+		c.DiscoverSettersPrefix = ""
+		c.DiscoverSettersSuffix = ""
+	}
 	return nil
 }
 

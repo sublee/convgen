@@ -22,13 +22,13 @@ type (
 )
 
 var WithoutModule = convgen.Struct[X, Y](nil,
-	convgen.DiscoverGetters(true, "", ""),
-	convgen.DiscoverSetters(true, "Set", ""),
+	convgen.DiscoverGetters("", ""),
+	convgen.DiscoverSetters("Set", ""),
 )
 
 var WithModule = convgen.Struct[X, Y](convgen.Module(
-	convgen.DiscoverGetters(true, "", ""),
-	convgen.DiscoverSetters(true, "Set", ""),
+	convgen.DiscoverGetters("", ""),
+	convgen.DiscoverSetters("Set", ""),
 ))
 
 func main() {

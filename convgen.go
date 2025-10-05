@@ -590,67 +590,86 @@ func RenameReset(inCancel, outCancel bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// Path parameters indicate a specific type or struct field.
+// Path parameters indicate a specific struct field, nested field, union
+// implementation, or enum member. Struct fields can be indicated by using
+// struct literals. Nested fields can be indicated by chaining field selections:
 //
-// A type itself, a field of a struct, or a nested field can be indicated as a
-// Path:
-//
-//	Order{}
-//	Order{}.ID
-//	Order{}.Address.City
+//	User{}
+//	User{}.ID
+//	User{}.Address.City
 //
 // The pointer type also can be indicated:
 //
-//	(*Order)(nil).SetID
+//	(&User{}).SetName
+//	(*User)(nil).SetName
 type Path = any
 
-// Match is a converter-level option which matches a pair manually.
+// Match manually maps a specific pair.
 //
-//	convgen.Struct[X, Y](mod,
-//		convgen.Match(X{}.ID, Y{}.Identifier),
+// For [Struct] and [StructErr], it specifies fields:
+//
+//	// source:
+//	convgen.Struct[User, api.User](nil,
+//		convgen.Match(User{}.Name, api.User{}.Username),
 //	)
 //
-// Accepted by [Struct], [StructErr], [Union], [UnionErr], [Enum], and
-// [EnumErr].
+// For [Union] and [UnionErr], it specifies implementations:
+//
+//	// source:
+//	convgen.Union[Event, api.Event](nil,
+//		convgen.Match(ClickEvent{}, &api.ClickEvt{}),
+//	)
+//
+// For [Enum] and [EnumErr], it specifies enum members:
+//
+//	// source:
+//	convgen.Enum[Status, api.Status](nil, api.STATUS_UNSPECIFIED,
+//		convgen.Match(StatusActive, api.STATUS_ACTIVE),
+//	)
 func Match(inPath, outPath Path) Option[no, no, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// MatchFunc is a converter-level option which matches a pair manually. It also
-// specifies a custom errorless converter function for converting them.
+// MatchFunc is a variant of [Match] that specifies a custom conversion function
+// for the pair:
 //
-//	convgen.Struct[X, Y](mod,
-//		convgen.MatchFunc(X{}.Name, Y{}.DisplayName, renderName),
+//	// source:
+//	convgen.Struct[User, api.User](mod,
+//		convgen.MatchFunc(User{}.Name, api.User{}.DisplayName, renderName),
 //	)
 //
-// Accepted by [Struct], [StructErr], [Union], and [UnionErr].
+//	// generated (simplified):
+//	func convUser(in User) (out api.User) {
+//		out.DisplayName = renderName(in.Name)
+//		return
+//	}
+//
+// To use a function that returns an error, use [MatchFuncErr] instead.
 func MatchFunc[In, Out Path](inPath In, outPath Out, fn func(In) Out) Option[no, no, yes, yes, no] {
 	panic("convgen: not generated")
 }
 
-// MatchFuncErr is a converter-level option which matches a pair manually. It also
-// specifies a custom errorful converter function for converting them.
-//
-//	convgen.StructErr[X, Y](mod,
-//		convgen.MatchFuncErr(X{}.UUID, Y{}.ID, parseUUID),
-//	)
-//
-// Accepted by [StructErr] and [UnionErr].
+// MatchFuncErr is the error-returning variant of [MatchFunc]. It specifies a
+// custom conversion function for the given pair.
 func MatchFuncErr[In, Out Path](inPath In, outPath Out, fn func(In) (Out, error)) Option[no, no, yes, yes, no] {
 	panic("convgen: not generated")
 }
 
-// MatchSkip is a converter-level option which marks a specific matched pair to
-// be ignored. To suppress errors on missing items, mark them by this option
-// with [Missing].
+// MatchSkip skips a specific pair so that Convgen does not attempt to match
+// them automatically. The pair must otherwise be matchable by Convgen;
+// otherwise, it reports an error at generation time.
 //
-//	convgen.Struct[X, Y](mod,
-//		convgen.MatchSkip(X{}.Metadata, Y{}.Metadata),
-//		convgen.MatchSkip(convgen.Missing, Y{}.Extra),
+//	// source:
+//	convgen.Struct[User, api.User](nil,
+//		convgen.MatchSkip(User{}.PasswordHash, api.User{}.PasswordHash),
 //	)
 //
-// Accepted by [Struct], [StructErr], [Union], [UnionErr], [Enum], and
-// [EnumErr].
+// A common use case is to ignore missing conversions using nil:
+//
+//	// source:
+//	convgen.Struct[User, api.User](nil,
+//		convgen.MatchSkip(nil, api.User{}.LastAPIVersion), // ignore missing conversion
+//	)
 func MatchSkip(inPath, outPath Path) Option[no, no, yes, yes, yes] {
 	panic("convgen: not generated")
 }

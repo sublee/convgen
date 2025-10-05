@@ -32,7 +32,7 @@ func discover[T Object](fac *factory, m *match.Matcher[T], d discovery[T]) error
 	errs := d.DiscoverX(func(obj T, key string) {
 		if !obj.Exported() {
 			if _, ok := explicit.Get(obj.Pos()); !ok {
-				if !fac.cfg.DiscoverUnexportedEnabled || !fac.cfg.DiscoverUnexportedX {
+				if !fac.cfg.DiscoverUnexportedX {
 					return
 				}
 			}
@@ -43,7 +43,7 @@ func discover[T Object](fac *factory, m *match.Matcher[T], d discovery[T]) error
 	errs = errors.Join(errs, d.DiscoverY(func(obj T, key string) {
 		if !obj.Exported() {
 			if _, ok := explicit.GetKey(obj.Pos()); !ok {
-				if !fac.cfg.DiscoverUnexportedEnabled || !fac.cfg.DiscoverUnexportedY {
+				if !fac.cfg.DiscoverUnexportedY {
 					return
 				}
 			}

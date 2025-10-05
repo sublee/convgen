@@ -598,17 +598,34 @@ func DiscoverBySample(inSample, outSample Path) Option[no, no, yes, yes, no] {
 	panic("convgen: not generated")
 }
 
-// DiscoverUnexported enables to discover unexported fields, methods,
-// implmentations, and values in the same package.
+// DiscoverUnexported enables discovery of unexported fields, implementations,
+// or enum members when the type is defined in the same package as the
+// converter:
 //
-//	type A struct { n int }
-//	type B struct { n int }
+//	type A struct{ n int }
+//	type B struct{ n int }
 //
-//	// Generate: b.n = a.n
-//	convgen.Struct[A, B](mod, convgen.DiscoverUnexported(true))
+//	// source:
+//	var AtoB = convgen.Struct[A, B](nil,
+//		convgen.DiscoverUnexported(true, true),
+//	)
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr], [Enum], and
-// [EnumErr].
+//	// generated (simplified):
+//	func AtoB(in A) (out B) {
+//		out.n = in.n
+//		return
+//	}
+//
+// Passing false disables discovery of unexported items, allowing previous
+// settings to be overridden:
+//
+//	var mod = convgen.Module(convgen.DiscoverUnexported(true, true))
+//	var conv1 = convgen.Struct[A, B](mod) // discovers unexported fields of A and B
+//	var conv2 = convgen.Struct[C, D](mod,
+//		convgen.DiscoverUnexported(false, false), // disables unexported discovery
+//	)
+//
+// When this option is specified multiple times, the last one takes effect.
 func DiscoverUnexported(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }

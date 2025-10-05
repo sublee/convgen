@@ -1,0 +1,2 @@
+main/main.go:15:16: cannot use X itself as a field
+main/main.go:15:21: cannot use Y itself as a field

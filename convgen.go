@@ -442,32 +442,65 @@ func ForEnum(opts ...forOption) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
-// ImportFunc is an option which registers a custom errorless converter function
-// (func(x) y) in the module. Converters in the module may use it to convert
-// inner types.
+// ImportFunc registers a custom errorless conversion function (func(In) Out)
+// with the module. Converters within the module may call this function when
+// converting fields of the corresponding types:
 //
-//	mod := convgen.New(convgen.ImportFunc(strconv.Itoa))
+//	// source:
+//	var mod = convgen.Module(convgen.ImportFunc(strconv.Itoa))
 //
-// Accepted by [Module] only.
+//	// generated: (inside a converter in mod)
+//	...
+//	out.ID = strconv.Itoa(in.ID)
+//	...
+//
+// Multiple functions with the same signature cannot be registered. For
+// error-returning conversions, use [ImportFuncErr].
 func ImportFunc[In, Out any](fn func(In) Out) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
-// ImportFuncErr is a module-level option which registers a custom errorful
-// converter function (func(x) (y, error)) in the module. Converters in the
-// module may use it to convert inner types.
+// ImportFuncErr is the error-returning variant of [ImportFunc]. It registers a
+// custom conversion function (func(In) (Out, error)) with the module.
+// Converters within the module may call this function when converting fields
+// that can fail.
 //
-//	mod := convgen.New(convgen.ImportFuncErr(strconv.Atoi))
+//	// source:
+//	var mod = convgen.Module(convgen.ImportFuncErr(strconv.Atoi))
 //
-// Accepted by [Module] only.
+//	// generated (inside a converter in mod):
+//	// ...
+//	out.ID, err = strconv.Atoi(in.ID)
+//	// ...
+//
+// Multiple functions with the same signature cannot be registered.
 func ImportFuncErr[In, Out any](fn func(In) (Out, error)) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
+// ImportErrWrap appends an error wrapper function (func(error) error) to the
+// module. An error wrapper is typically used to annotate errors with additional
+// context, such as stack traces or error codes.
+//
+//	// source:
+//	var mod = convgen.Module(convgen.ImportErrWrap(errtrace.Wrap))
+//
+//	// generated (inside a converter in mod):
+//	// ...
+//	if err != nil {
+//		err = errtrace.Wrap(err)
+//		return
+//	}
+//	// ...
+//
+// Multiple error wrappers can be registered. They are applied in the order they
+// are registered. To remove all registered wrappers, use [ImportErrWrapReset].
 func ImportErrWrap(fn func(error) error) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
+// ImportErrWrapReset clears all error wrappers previously registered by
+// [ImportErrWrap].
 func ImportErrWrapReset() Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }

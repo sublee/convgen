@@ -61,30 +61,6 @@ func parseArgs2[T1, T2 arg](p *Parser, call *ast.CallExpr) (T1, T2, error) {
 	return v1, v2, errs
 }
 
-func parseArgs3[T1, T2, T3 arg](p *Parser, call *ast.CallExpr) (T1, T2, T3, error) {
-	var v1 T1
-	var v2 T2
-	var v3 T3
-
-	expr1, expr2, expr3, err := needArgs3(p, call)
-	if err != nil {
-		return v1, v2, v3, err
-	}
-
-	var errs error
-
-	v1, err = parseArgExpr[T1](p, expr1)
-	errs = errors.Join(errs, err)
-
-	v2, err = parseArgExpr[T2](p, expr2)
-	errs = errors.Join(errs, err)
-
-	v3, err = parseArgExpr[T3](p, expr3)
-	errs = errors.Join(errs, err)
-
-	return v1, v2, v3, errs
-}
-
 func parseArgs4[T1, T2, T3, T4 arg](p *Parser, call *ast.CallExpr) (T1, T2, T3, T4, error) {
 	var v1 T1
 	var v2 T2

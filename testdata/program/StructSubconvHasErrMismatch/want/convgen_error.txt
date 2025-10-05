@@ -1,3 +1,1 @@
-main/main.go:29:10: strconv.Atoi error cannot be returned
-	X2.Child.S (string) -> Y2.Child.S (int)
-	calling strconv.Atoi(string) (int, error)
+main/main.go:29:10: cannot call strconv.Atoi to convert X2.Child.S (string) to Y2.Child.S (int): error return required

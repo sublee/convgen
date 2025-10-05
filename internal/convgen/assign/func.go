@@ -2,7 +2,6 @@ package assign
 
 import (
 	"go/token"
-	"go/types"
 
 	"github.com/sublee/convgen/internal/codefmt"
 	"github.com/sublee/convgen/internal/typeinfo"
@@ -25,19 +24,8 @@ func (as funcAssigner) requiresErr() bool { return as.Func.HasErr() }
 func (fac *factory) callFunc(x, y Object, fn typeinfo.Func) (*funcAssigner, error) {
 	if fn.HasErr() && !fac.allowsErr {
 		// Function has error, but may not return it.
-		var callee string
-		if fn.Name() != "" {
-			callee = codefmt.FormatObj(fac, fn.Object())
-		}
-		sig, _ := fn.Object().Type().(*types.Signature)
-		callee += codefmt.FormatSig(fac, sig)
-
-		err := codefmt.Errorf(fac, fac.inj, `%o error cannot be returned
-	%s -> %s
-	calling %s`,
-			fn,
-			x.DebugName(), y.DebugName(),
-			callee)
+		err := codefmt.Errorf(fac, fac.inj, "cannot call %o to convert %s to %s: error return required",
+			fn, x.DebugName(), y.DebugName())
 		return nil, err
 	}
 	return &funcAssigner{

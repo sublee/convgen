@@ -1,1 +1,1 @@
-main/main.go:15:2: cannot use nil for both parameters
+main/main.go:15:2: at least one parameter must be non-nil

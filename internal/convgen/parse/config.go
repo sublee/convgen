@@ -289,10 +289,10 @@ func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error 
 }
 
 func (p *Parser) ParseOptionImportFunc(c *Config, call *ast.CallExpr, hasErr bool) error {
-	if len(call.Args) != 1 {
-		return codefmt.Errorf(p, call, "need 1 parameter")
+	expr, err := needArgs1(p, call)
+	if err != nil {
+		return err
 	}
-	expr := call.Args[0]
 
 	fn, err := p.ParseFunc(expr, hasErr)
 	if err != nil {
@@ -308,10 +308,10 @@ func (p *Parser) ParseOptionImportFunc(c *Config, call *ast.CallExpr, hasErr boo
 }
 
 func (p *Parser) ParseOptionImportErrWrap(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 1 {
-		return codefmt.Errorf(p, call, "need 1 parameter")
+	expr, err := needArgs1(p, call)
+	if err != nil {
+		return err
 	}
-	expr := call.Args[0]
 
 	fn, err := p.ParseErrWrap(expr)
 	if err != nil {
@@ -326,8 +326,9 @@ func (p *Parser) ParseOptionImportErrWrap(c *Config, call *ast.CallExpr) error {
 }
 
 func (p *Parser) ParseOptionImportErrWrapReset(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 0 {
-		return codefmt.Errorf(p, call, "need no parameters")
+	err := needArgs0(p, call)
+	if err != nil {
+		return err
 	}
 
 	c.ErrWraps = nil
@@ -335,22 +336,13 @@ func (p *Parser) ParseOptionImportErrWrapReset(c *Config, call *ast.CallExpr) er
 }
 
 func (p *Parser) ParseOptionRenameBool(c *Config, call *ast.CallExpr, rename func(string) string) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
+	x, y, err := parseArgs2[bool, bool](p, call)
+	if err != nil {
+		return err
 	}
-	exprX, exprY := call.Args[0], call.Args[1]
 
-	var errs error
-	x, ok := evalBoolLit(exprX, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprX, "%s is not bool literal", exprX))
-	}
-	y, ok := evalBoolLit(exprY, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprY, "%s is not bool literal", exprY))
-	}
-	if errs != nil {
-		return errs
+	if !x && !y {
+		return codefmt.Errorf(p, call, "at least one parameter must be true")
 	}
 
 	if x {
@@ -365,22 +357,9 @@ func (p *Parser) ParseOptionRenameBool(c *Config, call *ast.CallExpr, rename fun
 }
 
 func (p *Parser) ParseOptionRenameString(c *Config, call *ast.CallExpr, rename func(string, string) string) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
-	}
-	exprX, exprY := call.Args[0], call.Args[1]
-
-	var errs error
-	x, ok := evalStringLit(exprX)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprX, "%s is not string literal", exprX))
-	}
-	y, ok := evalStringLit(exprY)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprY, "%s is not string literal", exprY))
-	}
-	if errs != nil {
-		return errs
+	x, y, err := parseArgs2[string, string](p, call)
+	if err != nil {
+		return err
 	}
 
 	if x != "" {
@@ -395,22 +374,9 @@ func (p *Parser) ParseOptionRenameString(c *Config, call *ast.CallExpr, rename f
 }
 
 func (p *Parser) ParseOptionRenameCommon(c *Config, call *ast.CallExpr, find func([]string) string, rename func(string, string) string) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
-	}
-	exprX, exprY := call.Args[0], call.Args[1]
-
-	var errs error
-	x, ok := evalBoolLit(exprX, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprX, "%s is not bool literal", exprX))
-	}
-	y, ok := evalBoolLit(exprY, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprY, "%s is not bool literal", exprY))
-	}
-	if errs != nil {
-		return errs
+	x, y, err := parseArgs2[bool, bool](p, call)
+	if err != nil {
+		return err
 	}
 
 	if x {
@@ -425,31 +391,9 @@ func (p *Parser) ParseOptionRenameCommon(c *Config, call *ast.CallExpr, find fun
 }
 
 func (p *Parser) ParseOptionRenameReplace(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 4 {
-		return codefmt.Errorf(p, call, "need 4 parameters")
-	}
-	oldExprX, newExprX := call.Args[0], call.Args[1]
-	oldExprY, newExprY := call.Args[2], call.Args[3]
-
-	var errs error
-	oldX, ok := evalStringLit(oldExprX)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, oldExprX, "%s is not string literal", oldExprX))
-	}
-	newX, ok := evalStringLit(newExprX)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, newExprX, "%s is not string literal", newExprX))
-	}
-	oldY, ok := evalStringLit(oldExprY)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, oldExprY, "%s is not string literal", oldExprY))
-	}
-	newY, ok := evalStringLit(newExprY)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, newExprY, "%s is not string literal", newExprY))
-	}
-	if errs != nil {
-		return errs
+	oldX, newX, oldY, newY, err := parseArgs4[string, string, string, string](p, call)
+	if err != nil {
+		return err
 	}
 
 	c.RenamersX = append(c.RenamersX, func(s, _ string) string { return strings.ReplaceAll(s, oldX, newX) })
@@ -460,36 +404,19 @@ func (p *Parser) ParseOptionRenameReplace(c *Config, call *ast.CallExpr) error {
 }
 
 func (p *Parser) ParseOptionRenameReplaceRegexp(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 4 {
-		return codefmt.Errorf(p, call, "need 4 parameters")
+	regexpPatternX, replX, regexpPatternY, replY, err := parseArgs4[string, string, string, string](p, call)
+	if err != nil {
+		return err
 	}
-	regexpExprX, replExprX := call.Args[0], call.Args[1]
-	regexpExprY, replExprY := call.Args[2], call.Args[3]
 
 	var errs error
-	regexpStrX, ok := evalStringLit(regexpExprX)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, regexpExprX, "%s is not string literal", regexpExprX))
-	}
-	regexpX, err := regexp.Compile(regexpStrX)
+	regexpX, err := regexp.Compile(regexpPatternX)
 	if err != nil {
-		errs = errors.Join(errs, codefmt.Errorf(p, regexpExprX, "invalid regexp %q: %w", regexpStrX, err))
+		errs = errors.Join(errs, codefmt.Errorf(p, call, "invalid regexp pattern: %s", regexpPatternX))
 	}
-	replX, ok := evalStringLit(replExprX)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, replExprX, "%s is not string literal", replExprX))
-	}
-	regexpStrY, ok := evalStringLit(regexpExprY)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, regexpExprY, "%s is not string literal", regexpExprY))
-	}
-	regexpY, err := regexp.Compile(regexpStrY)
+	regexpY, err := regexp.Compile(regexpPatternY)
 	if err != nil {
-		errs = errors.Join(errs, codefmt.Errorf(p, regexpExprY, "invalid regexp %q: %w", regexpStrY, err))
-	}
-	replY, ok := evalStringLit(replExprY)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, replExprY, "%s is not string literal", replExprY))
+		errs = errors.Join(errs, codefmt.Errorf(p, call, "invalid regexp pattern: %s", regexpPatternY))
 	}
 	if errs != nil {
 		return errs
@@ -503,22 +430,9 @@ func (p *Parser) ParseOptionRenameReplaceRegexp(c *Config, call *ast.CallExpr) e
 }
 
 func (p *Parser) ParseOptionRenameReset(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
-	}
-	exprX, exprY := call.Args[0], call.Args[1]
-
-	var errs error
-	x, ok := evalBoolLit(exprX, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprX, "%s is not bool literal", exprX))
-	}
-	y, ok := evalBoolLit(exprY, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprY, "%s is not bool literal", exprY))
-	}
-	if errs != nil {
-		return errs
+	x, y, err := parseArgs2[bool, bool](p, call)
+	if err != nil {
+		return err
 	}
 
 	if x {
@@ -533,22 +447,9 @@ func (p *Parser) ParseOptionRenameReset(c *Config, call *ast.CallExpr) error {
 }
 
 func (p *Parser) ParseOptionDiscoverUnexported(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
-	}
-	exprX, exprY := call.Args[0], call.Args[1]
-
-	var errs error
-	x, ok := evalBoolLit(exprX, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprX, "%s is not bool literal", exprX))
-	}
-	y, ok := evalBoolLit(exprY, p.Pkg().TypesInfo)
-	if !ok {
-		errs = errors.Join(errs, codefmt.Errorf(p, exprY, "%s is not bool literal", exprY))
-	}
-	if errs != nil {
-		return errs
+	x, y, err := parseArgs2[bool, bool](p, call)
+	if err != nil {
+		return err
 	}
 
 	c.DiscoverUnexportedEnabled = true
@@ -558,22 +459,9 @@ func (p *Parser) ParseOptionDiscoverUnexported(c *Config, call *ast.CallExpr) er
 }
 
 func (p *Parser) ParseOptionDiscoverGetters(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 3 {
-		return codefmt.Errorf(p, call, "need 3 parameters")
-	}
-	enableExpr, prefixExpr, suffixExpr := call.Args[0], call.Args[1], call.Args[2]
-
-	enable, ok := evalBoolLit(enableExpr, p.Pkg().TypesInfo)
-	if !ok {
-		return codefmt.Errorf(p, enableExpr, "%s is not bool literal", enableExpr)
-	}
-	prefix, ok := evalStringLit(prefixExpr)
-	if !ok {
-		return codefmt.Errorf(p, prefixExpr, "%s is not string literal", prefixExpr)
-	}
-	suffix, ok := evalStringLit(suffixExpr)
-	if !ok {
-		return codefmt.Errorf(p, suffixExpr, "%s is not string literal", suffixExpr)
+	enable, prefix, suffix, err := parseArgs3[bool, string, string](p, call)
+	if err != nil {
+		return err
 	}
 
 	if !enable {
@@ -590,29 +478,15 @@ func (p *Parser) ParseOptionDiscoverGetters(c *Config, call *ast.CallExpr) error
 }
 
 func (p *Parser) ParseOptionDiscoverSetters(c *Config, call *ast.CallExpr) error {
-	if len(call.Args) != 3 {
-		return codefmt.Errorf(p, call, "need 3 parameters")
-	}
-	enableExpr, prefixExpr, suffixExpr := call.Args[0], call.Args[1], call.Args[2]
-
-	enable, ok := evalBoolLit(enableExpr, p.Pkg().TypesInfo)
-	if !ok {
-		return codefmt.Errorf(p, enableExpr, "%s is not bool literal", enableExpr)
-	}
-	prefix, ok := evalStringLit(prefixExpr)
-	if !ok {
-		return codefmt.Errorf(p, prefixExpr, "%s is not string literal", prefixExpr)
-	}
-	suffix, ok := evalStringLit(suffixExpr)
-	if !ok {
-		return codefmt.Errorf(p, suffixExpr, "%s is not string literal", suffixExpr)
+	enable, prefix, suffix, err := parseArgs3[bool, string, string](p, call)
+	if err != nil {
+		return err
 	}
 
 	if !enable {
 		c.DiscoverSettersEnabled = false
 		c.DiscoverSettersPrefix = ""
 		c.DiscoverSettersSuffix = ""
-		return nil
 	}
 
 	c.DiscoverSettersEnabled = true
@@ -624,15 +498,17 @@ func (p *Parser) ParseOptionDiscoverSetters(c *Config, call *ast.CallExpr) error
 func (p *Parser) ParseOptionMatch(c *Config, call *ast.CallExpr, ps parsers, withFn bool, hasErr bool) error {
 	var elemX, elemY, fnExpr ast.Expr
 	if withFn {
-		if len(call.Args) != 3 {
-			return codefmt.Errorf(p, call, "need 3 parameters")
+		var err error
+		elemX, elemY, fnExpr, err = needArgs3(p, call)
+		if err != nil {
+			return err
 		}
-		elemX, elemY, fnExpr = call.Args[0], call.Args[1], call.Args[2]
 	} else {
-		if len(call.Args) != 2 {
-			return codefmt.Errorf(p, call, "need 2 parameters")
+		var err error
+		elemX, elemY, err = needArgs2(p, call)
+		if err != nil {
+			return err
 		}
-		elemX, elemY = call.Args[0], call.Args[1]
 	}
 
 	if p.IsNil(elemX) {
@@ -681,10 +557,10 @@ func (p *Parser) ParseOptionMatch(c *Config, call *ast.CallExpr, ps parsers, wit
 }
 
 func (p *Parser) ParseOptionMatchSkip(c *Config, call *ast.CallExpr, ps parsers) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
+	elemX, elemY, err := needArgs2(p, call)
+	if err != nil {
+		return err
 	}
-	elemX, elemY := call.Args[0], call.Args[1]
 
 	nilX := p.IsNil(elemX)
 	nilY := p.IsNil(elemY)
@@ -732,10 +608,10 @@ func (p *Parser) ParseOptionMatchSkip(c *Config, call *ast.CallExpr, ps parsers)
 }
 
 func (p *Parser) ParseOptionDiscoverBySample(c *Config, call *ast.CallExpr, ps parsers) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
+	elemX, elemY, err := needArgs2(p, call)
+	if err != nil {
+		return err
 	}
-	elemX, elemY := call.Args[0], call.Args[1]
 
 	var errs error
 	if c.DiscoverBySampleEnabled {
@@ -764,7 +640,7 @@ func (p *Parser) ParseOptionDiscoverBySample(c *Config, call *ast.CallExpr, ps p
 	}
 
 	if pkgX == nil && pkgY == nil {
-		return codefmt.Errorf(p, call, "cannot use nil for both parameters")
+		return codefmt.Errorf(p, call, "at least one parameter must be non-nil")
 	}
 
 	c.DiscoverBySampleEnabled = true
@@ -777,35 +653,11 @@ func (p *Parser) ParseOptionDiscoverBySample(c *Config, call *ast.CallExpr, ps p
 	return nil
 }
 
-func (p *Parser) IsNil(expr ast.Expr) bool {
-	expr = ast.Unparen(expr)
-
-	// nil
-	if id, ok := expr.(*ast.Ident); ok {
-		if id.Name == "nil" {
-			return true
-		}
-	}
-
-	// T(nil)
-	if call, ok := expr.(*ast.CallExpr); ok {
-		fun := ast.Unparen(call.Fun)
-		if !call.Ellipsis.IsValid() && len(call.Args) == 1 {
-			switch fun.(type) {
-			case *ast.ArrayType, *ast.StructType, *ast.FuncType, *ast.InterfaceType, *ast.MapType, *ast.ChanType:
-				return p.IsNil(call.Args[0])
-			}
-		}
-	}
-
-	return false
-}
-
 func (p *Parser) ParseOptionDiscoverNested(c *Config, call *ast.CallExpr, ps parsers) error {
-	if len(call.Args) != 2 {
-		return codefmt.Errorf(p, call, "need 2 parameters")
+	elemX, elemY, err := needArgs2(p, call)
+	if err != nil {
+		return err
 	}
-	elemX, elemY := call.Args[0], call.Args[1]
 
 	var errs error
 	var pathX, pathY Path
@@ -822,6 +674,10 @@ func (p *Parser) ParseOptionDiscoverNested(c *Config, call *ast.CallExpr, ps par
 	}
 	if errs != nil {
 		return errs
+	}
+
+	if !pathX.IsValid() && !pathY.IsValid() {
+		return codefmt.Errorf(p, call, "at least one parameter must be non-nil")
 	}
 
 	if err := ps.ValidatePath(p, pathX, elemX.Pos()); err != nil {

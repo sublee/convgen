@@ -51,6 +51,30 @@ func New(pkg *packages.Package) (*Parser, error) {
 	return &Parser{pkg: pkg}, nil
 }
 
+func (p *Parser) IsNil(expr ast.Expr) bool {
+	expr = ast.Unparen(expr)
+
+	// nil
+	if id, ok := expr.(*ast.Ident); ok {
+		if id.Name == "nil" {
+			return true
+		}
+	}
+
+	// T(nil)
+	if call, ok := expr.(*ast.CallExpr); ok {
+		fun := ast.Unparen(call.Fun)
+		if !call.Ellipsis.IsValid() && len(call.Args) == 1 {
+			switch fun.(type) {
+			case *ast.ArrayType, *ast.StructType, *ast.FuncType, *ast.InterfaceType, *ast.MapType, *ast.ChanType:
+				return p.IsNil(call.Args[0])
+			}
+		}
+	}
+
+	return false
+}
+
 // ParseFunc parses a function expression. If hasErr is true, the function must
 // return an error as the last return value. The function is used for
 // [convgen.ImportFunc], [convgen.MatchFunc], and their Err variants.
@@ -195,4 +219,27 @@ func hasGoBuildConvgen(file *ast.File) bool {
 		}
 	}
 	return ok
+}
+
+// tailIdent extracts the rightmost [ast.Ident] from the expression.
+//
+//	Foo{}
+//	^^^
+//	Foo{}.Bar
+//	      ^^^
+//	(*Foo)(nil).Bar.Baz
+//	                ^^^
+func tailIdent(expr ast.Expr) (*ast.Ident, bool) {
+	expr = ast.Unparen(expr)
+	switch expr := expr.(type) {
+	case *ast.Ident:
+		// foo
+		// ^^^
+		return expr, true
+	case *ast.SelectorExpr:
+		// foo.bar.baz
+		//         ^^^
+		return tailIdent(expr.Sel)
+	}
+	return nil, false
 }

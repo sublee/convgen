@@ -505,88 +505,191 @@ func ImportErrWrapReset() Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
-// RenameReplace is a renaming option that registers a renaming rule that
-// replaces old with new for matching names.
+// RenameReplace appends a renaming rule that replaces old with new for matching
+// names:
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(
+//		convgen.RenameReplace("Id", "ID", "", ""),
+//	)
+//
+//	// matching:
+//	ID [Id]               -> ID
+//	SessionID [SessionId] -> SessionID
+//
+// Note that names in brackets are original names before renaming.
 func RenameReplace(inOld, inNew, outOld, outNew string) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
+// RenameReplaceRegexp appends a renaming rule that replaces substrings matching
+// regular expressions with the specified replacements for matching names:
+//
+//	// source:
+//	var mod = convgen.Module(
+//		convgen.RenameReplaceRegexp("(.).+", "${1}", "(.).+", "${1}"), // keep only the first letter
+//	)
+//
+//	// matching:
+//	A [Apple]    -> A [Alice]
+//	B [Banana]   -> B [Bob]
+//	C [Caroline] -> C [Caroline]
+//
+// Note that names in brackets are original names before renaming.
 func RenameReplaceRegexp(inRegexp, inRepl, outRegexp, outRepl string) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameToLower is a renaming option that registers a renaming rule that
-// converts to lowercase for matching names.
+// RenameToLower appends a renaming rule that converts names to lowercase for
+// matching:
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(convgen.RenameToLower(true, true))
+//
+//	// matching:
+//	id [Id]               -> id [ID]
+//	sessionid [SessionId] -> sessionid [SessionID]
+//
+// Note that names in brackets are original names before renaming.
 func RenameToLower(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameToUppser is a renaming option that registers a renaming rule that
-// converts to uppercase for matching names.
+// RenameToUpper appends a renaming rule that converts names to uppercase for
+// matching:
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(convgen.RenameToLower(true, true))
+//
+//	// matching:
+//	ID [Id]               -> ID
+//	SESSIONID [SessionId] -> SESSIONID [SessionID]
+//
+// Note that names in brackets are original names before renaming.
 func RenameToUpper(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameTrimPrefix is a renaming option that registers a renaming rule that
-// trims a prefix for matching names.
+// RenameTrimPrefix appends a renaming rule that trims a prefix from matching
+// names.
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(convgen.RenameTrimPrefix("Prop", ""))
+//
+//	// matching:
+//	ID [PropID]               -> ID
+//	Name [PropName]           -> Name
+//	SessionID [PropSessionID] -> SessionID
+//
+// Note that names in brackets are original names before renaming.
 func RenameTrimPrefix(inPrefix, outPrefix string) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameTrimSuffix is a renaming option that registers a renaming rule that
-// trims a suffix for matching names.
+// RenameTrimSuffix appends a renaming rule that trims a suffix for matching
+// names.
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(convgen.RenameTrimSuffix("Value", ""))
+//
+//	// matching:
+//	ID [IDValue]               -> ID
+//	Name [NameValue]           -> Name
+//	SessionID [SessionIDValue] -> SessionID
+//
+// Note that names in brackets are original names before renaming.
 func RenameTrimSuffix(inSuffix, outSuffix string) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameTrimCommonPrefix is a renaming option that registers a renaming rule
-// trims the longest common prefix for matching names.
+// RenameTrimCommonPrefix appends a renaming rule that trims the longest common
+// prefix from matching names:
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(convgen.RenameTrimCommonPrefix(true, false))
+//
+//	// matching:
+//	Active [StatusActive]   -> Active
+//	Pending [StatusPending] -> Pending
+//	Done [StatusDone]       -> Done
+//
+// Note that names in brackets are original names before renaming.
 func RenameTrimCommonPrefix(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameTrimCommonSuffix is a renaming option that registers a renaming rule
-// trims the longest common suffix for matching names.
+// RenameTrimCommonSuffix appends a renaming rule that trims the longest common
+// suffix from matching names:
 //
-// Accepted by [Module], [Struct], [StructErr], [Union], [UnionErr],
-// [Enum], and [EnumErr].
+//	// source:
+//	var mod = convgen.Module(convgen.RenameTrimCommonSuffix(true, false))
+//
+//	// matching:
+//	Admin [AdminRole] -> Admin
+//	Host [HostRole]   -> Host
+//	Guest [GuestRole] -> Guest
+//
+// Note that names in brackets are original names before renaming.
 func RenameTrimCommonSuffix(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameTrimCommonWordPrefix is a renaming option that registers a renaming rule that
-// trims the longest common prefix for matching names based on word boundaries
+// RenameTrimCommonWordPrefix appends a renaming rule that trims the longest
+// common prefix from matching names based on word boundaries:
+//
+//	// source:
+//	var mod = convgen.Module(convgen.RenameTrimCommonWordPrefix(true, false))
+//
+//	// matching:
+//	Name [GetName]                   -> Name
+//	Notifications [GetNotifications] -> Notifications
+//
+// Note that names in brackets are original names before renaming.
+// [RenameTrimCommonPrefix] will detect "GetN" as the common prefix, but this
+// option detects "Get" only.
+//
+// Word boundaries are determined by transitions:
+//
+//   - Uppercase letter after lowercase letter: "getID" -> "get" + "ID"
+//   - Around underscores: "send_nowait" -> "send" + "_" + "nowait"
+//   - Around digits: "file2name" -> "file" + "2" + "name"
 func RenameTrimCommonWordPrefix(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameTrimCommonWordSuffix is a renaming option that registers a renaming rule that
-// trims the longest common suffix for matching names based on word boundaries.
+// RenameTrimCommonWordSuffix appends a renaming rule that trims the longest
+// common suffix from matching names based on word boundaries:
+//
+//	// source:
+//	var mod = convgen.Module(convgen.RenameTrimCommonWordSuffix(true, false))
+//
+//	// matching:
+//	Name [NameValue]   -> Name
+//	Theme [ThemeValue] -> Theme
+//
+// Note that names in brackets are original names before renaming.
+// [RenameTrimCommonSuffix] will detect "meValue" as the common suffix, but this
+// option detects "Value" only.
+//
+// Word boundaries are determined by transitions:
+//
+//   - Uppercase letter after lowercase letter: "getID" -> "get" + "ID"
+//   - Around underscores: "send_nowait" -> "send" + "_" + "nowait"
+//   - Around digits: "file2name" -> "file" + "2" + "name"
 func RenameTrimCommonWordSuffix(inEnable, outEnable bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 
-// RenameReset is a renaming option that clears all the renaming rules
-// registered so far.
-func RenameReset(inCancel, outCancel bool) Option[yes, yes, yes, yes, yes] {
+// RenameReset clears all renaming rules previously registered by any Rename
+// options:
+//
+//	// source:
+//	var mod = convgen.Module(
+//		convgen.RenameReplace("Id", "ID", "", ""),
+//		convgen.RenameToLower(true, true),
+//		convgen.RenameReset(true, true), // clears all above rules
+//	)
+func RenameReset(inReset, outReset bool) Option[yes, yes, yes, yes, yes] {
 	panic("convgen: not generated")
 }
 

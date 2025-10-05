@@ -385,14 +385,59 @@ type Option[Module, For, Struct, Union, Enum canUseFor] interface {
 	enumOption() Enum
 }
 
+// ForStruct qualifies options to apply only to struct converters within the module.
+//
+//	// source:
+//	var mod = convgen.Module(
+//		convgen.ForStruct(convgen.DiscoverUnexported(true, false)),
+//	)
+//
+//	// Applies to struct converters. Unexported fields of User are discovered.
+//	var convUser = convgen.Struct[User, api.User](mod)
+//
+//	// Does not apply to enum converters.
+//	var convStatus = convgen.Enum[Status, api.Status](mod)
+//
+// When this option is specified multiple times, all of them are applied in
+// order.
 func ForStruct(opts ...forOption) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
+// ForUnion qualifies options to apply only to union converters within the module.
+//
+//	// source:
+//	var mod = convgen.Module(
+//		convgen.ForUnion(convgen.RenameTrimCommonWordSuffix(true, false)),
+//	)
+//
+//	// Applies to union converters. The common suffix of Event implementations are trimmed.
+//	var convEvent = convgen.Union[Event, api.Event](mod)
+//
+//	// Does not apply to struct converters.
+//	var convUser = convgen.Struct[User, api.User](mod)
+//
+// When this option is specified multiple times, all of them are applied in
+// order.
 func ForUnion(opts ...forOption) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }
 
+// ForEnum qualifies options to apply only to enum converters within the module.
+//
+//	// source:
+//	var mod = convgen.Module(
+//		convgen.ForEnum(convgen.RenameTrimCommonWordPrefix(true, false)),
+//	)
+//
+//	// Applies to enum converters: The common prefix of Status members are trimmed.
+//	var convStatus = convgen.Enum[Status, api.Status](mod)
+//
+//	// Does not apply to struct converters.
+//	var convUser = convgen.Struct[User, api.User](mod)
+//
+// When this option is specified multiple times, all of them are applied in
+// order.
 func ForEnum(opts ...forOption) Option[yes, no, no, no, no] {
 	panic("convgen: not generated")
 }

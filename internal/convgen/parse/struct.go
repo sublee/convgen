@@ -111,7 +111,19 @@ func (ps structParsers) parse(p *Parser, expr ast.Expr, owner typeinfo.Type) (*P
 
 		return nil, fieldErr
 	}
-	return parse(expr, owner)
+
+	path, err := parse(expr, owner)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(path.StructField) == 0 {
+		return nil, codefmt.Errorf(p, expr, "field must belong to %t{}; got %c", owner, expr)
+	}
+	if len(path.StructField) == 1 {
+		return nil, codefmt.Errorf(p, expr, "cannot use %t itself as a field", owner)
+	}
+	return path, nil
 }
 
 func (ps structParsers) ParsePathX(p *Parser, expr ast.Expr) (*Path, error) {

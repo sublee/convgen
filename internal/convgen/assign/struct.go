@@ -386,12 +386,11 @@ func (d structDiscovery) resolveParent(owner Object, path parse.Path) (Object, e
 	if len(path.StructField) == 0 {
 		panic("empty path")
 	}
+	if len(path.StructField) == 1 {
+		panic("struct itself")
+	}
 	if path.StructField[0].Pos() != owner.Pos() {
 		panic("not a field of owner")
-	}
-
-	if len(path.StructField) == 1 {
-		return nil, codefmt.Errorf(codefmt.Pkg(d.pkg), codefmt.Pos(path.Pos), "cannot use %t itself as a field", owner)
 	}
 
 	parent := owner

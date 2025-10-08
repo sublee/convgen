@@ -107,6 +107,10 @@ func (ps structParsers) parse(p *Parser, expr ast.Expr, owner typeinfo.Type) (*P
 			path.StructField = append(path.StructField, obj)
 			path.Pos = obj.Pos()
 			return path, nil
+
+		case *ast.StarExpr:
+			// Expression: (*(T{}.Field))
+			return parse(x.X, owner)
 		}
 
 		return nil, fieldErr

@@ -500,40 +500,40 @@ func (as structAssigner) writeMatchesCode(w *codefmt.Writer, matches []matchAssi
 		defer w.Printf("}\n")
 	}
 
-	var next func(x, y typeinfo.Type, cursorX, cursorY int)
-	next = func(x, y typeinfo.Type, cursorX, cursorY int) {
-		// Write blocks to flatten nested X first because if there are no values
-		// to convert, we don't need to proceed assigning Y fields.
-		if len(pathX) != 0 && cursorX-1 < len(pathX) {
-			if x.IsStruct() && cursorX < len(pathX) {
-				f, _ := x.StructField(pathX[cursorX])
-				next(typeinfo.TypeOf(f.Type()), y, cursorX+1, cursorY)
-				return
-			}
-			if x.IsPointer() {
-				// Unwrap pointer to the nested X field.
-				w.Printf("if %s.%s != nil {\n", varX, strings.Join(pathX[:cursorX], "."))
-				next(*x.Elem, y, cursorX, cursorY)
-				w.Printf("}\n")
-				return
-			}
+	// Walk the prefixes to unwrap pointers and access nested fields. In X.A.B
+	// -> Y.C.D mapping, pathX is ["A", "B"] and pathY is ["C", "D"]. We walk
+	// down the paths until both are empty, then write the field assignments.
+	// Along the way, if we encounter a pointer, we dereference it in X or
+	// allocate a new value in Y.
+	var next func(x, y typeinfo.Type, pathX, pathY []string, varX, varY string)
+	next = func(x, y typeinfo.Type, pathX, pathY []string, varX, varY string) {
+		if x.IsPointer() {
+			w.Printf("if %s != nil {\n", varX)
+			next(*x.Elem, y, pathX, pathY, "(*"+varX+")", varY)
+			w.Printf("}\n")
+			return
 		}
 
-		// Then write blocks to flatten nested Y fields.
-		if len(pathY) != 0 && cursorY-1 < len(pathY) {
-			if y.IsStruct() && cursorY < len(pathY) {
-				f, _ := y.StructField(pathY[cursorY])
-				next(x, typeinfo.TypeOf(f.Type()), cursorX, cursorY+1)
-				return
-			}
-			if y.IsPointer() {
-				// Assign a value at the pointer to the nested Y field.
-				w.Printf("if %s.%s == nil {\n", varY, strings.Join(pathY[:cursorY], "."))
-				w.Printf("%s.%s = new(%t)\n", varY, strings.Join(pathY[:cursorY], "."), y.Elem)
-				w.Printf("}\n")
-				next(x, *y.Elem, cursorX, cursorY)
-				return
-			}
+		if y.IsPointer() {
+			w.Printf("if %s == nil {\n", varY)
+			w.Printf("%s = new(%t)\n", varY, y.Elem)
+			w.Printf("}\n")
+			next(x, *y.Elem, pathX, pathY, varX, "(*"+varY+")")
+			return
+		}
+
+		if len(pathX) != 0 && x.IsStruct() {
+			f, _ := x.StructField(pathX[0])
+			nextX := typeinfo.TypeOf(f.Type())
+			next(nextX, y, pathX[1:], pathY, varX+"."+pathX[0], varY)
+			return
+		}
+
+		if len(pathY) != 0 && y.IsStruct() {
+			f, _ := y.StructField(pathY[0])
+			nextY := typeinfo.TypeOf(f.Type())
+			next(x, nextY, pathX, pathY[1:], varX, varY+"."+pathY[0])
+			return
 		}
 
 		// We have reached the end of both prefixes, so we can write the field
@@ -542,7 +542,7 @@ func (as structAssigner) writeMatchesCode(w *codefmt.Writer, matches []matchAssi
 			as.writeFieldAssignCode(w, m, varX, varY, varErr, labelEnd)
 		}
 	}
-	next(as.x.Type(), as.y.Type(), 0, 0)
+	next(as.x.Type(), as.y.Type(), pathX, pathY, varX, varY)
 }
 
 // writeFieldAssignCode writes code to assign a field X to a field Y.
@@ -570,24 +570,24 @@ func (as structAssigner) writeFieldAssignCode(w *codefmt.Writer, m matchAssigner
 	// Get X field
 	var varFieldX string
 	if m.X.field != nil {
-		varFieldX = fmt.Sprintf("%s.%s", varX, m.X.CrumbNameAfter(as.x))
+		varFieldX = fmt.Sprintf("%s.%s", varX, m.X.name)
 	} else {
 		if m.X.getter.HasErr() {
 			// TODO: safe?
-			varFieldX = w.Name("x" + m.X.CrumbNameAfter(as.x))
+			varFieldX = w.Name("x" + m.X.name)
 			varTmpErr := w.Name("err")
-			w.Printf("%s, %s := %s.%s()\n", varFieldX, varTmpErr, varX, m.X.CrumbNameAfter(as.x))
+			w.Printf("%s, %s := %s.%s()\n", varFieldX, varTmpErr, varX, m.X.name)
 			gotoEndIfErr(varTmpErr, true)
 		} else {
-			varFieldX = fmt.Sprintf("%s.%s()", varX, m.X.CrumbNameAfter(as.x))
+			varFieldX = fmt.Sprintf("%s.%s()", varX, m.X.name)
 		}
 	}
 
 	var varFieldY string
 	if m.Y.field != nil {
-		varFieldY = fmt.Sprintf("%s.%s", varY, m.Y.CrumbNameAfter(as.y))
+		varFieldY = fmt.Sprintf("%s.%s", varY, m.Y.name)
 	} else {
-		varFieldY = w.Name("y" + m.Y.CrumbNameAfter(as.y))
+		varFieldY = w.Name("y" + m.Y.name)
 		w.Printf("var %s %t\n", varFieldY, m.Y)
 	}
 
@@ -605,10 +605,10 @@ func (as structAssigner) writeFieldAssignCode(w *codefmt.Writer, m matchAssigner
 	if m.Y.setter != nil {
 		if m.Y.setter.HasErr() {
 			varTmpErr := w.Name("err")
-			w.Printf("%s := %s.%s(%s)\n", varTmpErr, varY, m.Y.CrumbNameAfter(as.y), varFieldY)
+			w.Printf("%s := %s.%s(%s)\n", varTmpErr, varY, m.Y.name, varFieldY)
 			gotoEndIfErr(varTmpErr, true)
 		} else {
-			w.Printf("%s.%s(%s)\n", varY, m.Y.CrumbNameAfter(as.y), varFieldY)
+			w.Printf("%s.%s(%s)\n", varY, m.Y.name, varFieldY)
 		}
 	}
 

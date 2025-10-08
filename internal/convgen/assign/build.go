@@ -98,12 +98,6 @@ func (fac *factory) buildExplicit() (assigner, error) {
 		if as, err := fac.tryStruct(x, y); !errors.Is(err, skip) {
 			return as, err
 		}
-
-		// convgen.Struct allows pointer of struct
-		if as, err := fac.tryStructPointer(x, y); !errors.Is(err, skip) {
-			return as, err
-		}
-
 		return nil, codefmt.Errorf(fac.inj, fac.inj, "no struct")
 
 	case fac.inj.Union:

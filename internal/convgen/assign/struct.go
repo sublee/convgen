@@ -18,8 +18,8 @@ import (
 	"github.com/sublee/convgen/internal/typeinfo"
 )
 
-// structAssigner assigns a struct type to another struct type by matching
-// fields and methods.
+// structAssigner performs assignment between two struct types by matching
+// their fields and methods. It supports structs at any pointer depth.
 type structAssigner struct {
 	x, y    Object // must be struct types
 	matches []matchAssigner[structField]
@@ -45,7 +45,7 @@ func (as structAssigner) requiresErr() bool {
 // tryStruct tries to create a [structAssigner] from x to y by matching fields
 // and methods.
 func (fac *factory) tryStruct(x, y Object) (*structAssigner, error) {
-	if !x.Type().IsStruct() || !y.Type().IsStruct() {
+	if !x.Type().Deref().IsStruct() || !y.Type().Deref().IsStruct() {
 		return nil, skip
 	}
 
@@ -125,21 +125,6 @@ func (o structField) QualName() string {
 // names rather than type names.
 func (o structField) CrumbName() string {
 	return codefmt.Sprintf(codefmt.Pkg(o.pkg), "%s.%s", o.owner.CrumbName(), o.name)
-}
-
-// CrumbNameAfter returns the crumb name, like [structField.CrumbName], but
-// relative to the given base object. This is needed to build the correct field
-// path in [structAssigner.writeFlattenCode], because subconverters take fields
-// from the root object, not from the nested one.
-func (o structField) CrumbNameAfter(base Object) string {
-	if o.owner == base {
-		return o.name
-	}
-	s, ok := o.owner.(structField)
-	if !ok {
-		return o.name
-	}
-	return s.CrumbNameAfter(base) + "." + o.name
 }
 
 // DebugName returns the crumb name with its type for debugging. For example,
@@ -424,9 +409,14 @@ func (as structAssigner) groupMatches() []matchGroup {
 	// Group matches by the prefix of the field names.
 	prefixed := make(map[[2]string][]matchAssigner[structField])
 	for _, pair := range as.matches {
-		pathX := pair.X.CrumbNameAfter(as.x)
-		pathY := pair.Y.CrumbNameAfter(as.y)
+		pathX := pair.X.CrumbName()
+		pathY := pair.Y.CrumbName()
 
+		// Remove the root struct name from the crumb name.
+		pathX = strings.TrimPrefix(pathX, as.x.CrumbName()+".")
+		pathY = strings.TrimPrefix(pathY, as.y.CrumbName()+".")
+
+		// Remove the last field name to get the prefix.
 		var prefixX, prefixY string
 		if i := strings.LastIndex(pathX, "."); i != -1 {
 			prefixX = pathX[:i]
@@ -435,8 +425,8 @@ func (as structAssigner) groupMatches() []matchGroup {
 			prefixY = pathY[:j]
 		}
 
-		prefixes := [2]string{prefixX, prefixY}
-		prefixed[prefixes] = append(prefixed[prefixes], pair)
+		prefix := [2]string{prefixX, prefixY}
+		prefixed[prefix] = append(prefixed[prefix], pair)
 	}
 
 	// Sort by prefix names.
@@ -463,8 +453,12 @@ func (as structAssigner) groupMatches() []matchGroup {
 func (as structAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr string) {
 	labelEnd := w.Name("end")
 
-	for _, m := range as.groupMatches() {
+	matches := as.groupMatches()
+	for _, m := range matches {
 		as.writeMatchesCode(w, m.Matches, m.PrefixX, m.PrefixY, varX, varY, varErr, labelEnd)
+	}
+	if len(matches) == 0 {
+		as.writeMatchesCode(w, nil, "", "", varX, varY, varErr, labelEnd)
 	}
 
 	if varErr != "" {

@@ -716,6 +716,16 @@ type Path = any
 //		convgen.Match(User{}.Name, api.User{}.Username),
 //	)
 //
+// Match can also target nested struct fields. When mapping a nested field,
+// Convgen still attempts to match its parent fields automatically, so they
+// should be skipped explicitly with [MatchSkip]:
+//
+//	// source:
+//	convgen.Struct[User, api.User](mod,
+//		convgen.Match(User{}.Profile.Address, api.User{}.Address),
+//		convgen.MatchSkip(User{}.Profile, nil),
+//	)
+//
 // For [Union] and [UnionErr], it specifies implementations:
 //
 //	// source:
@@ -930,13 +940,44 @@ func DiscoverFieldsOnly(inEnable, outEnable bool) Option[yes, yes, yes, no, no] 
 	panic("convgen: not generated")
 }
 
-// DiscoverNested is a converter-level option which ...
+// DiscoverNested includes the fields of nested structs in the matching scope.
+// It is useful when converting between flat and nested struct layouts.
 //
-//	convgen.Struct[Person, FlatPerson](mod,
-//		convgen.DiscoverNested(Person{}.Address, FlatPerson{}),
+// For example, consider:
+//
+//	type User struct {
+//		ID string
+//		Profile struct {
+//			Email   string
+//			Address string
+//		}
+//	}
+//
+//	type api.User struct {
+//		ID      string
+//		Email   string
+//		Address string
+//	}
+//
+// By default, Convgen attempts to match User.Profile with api.User.Profile,
+// which does not exist. To flatten User.Profile into api.User, enable
+// DiscoverNested:
+//
+//	// source:
+//	var convUser = convgen.Struct[User, api.User](nil,
+//		convgen.DiscoverNested(User{}.Profile, nil),
 //	)
 //
-// Accepted by [Struct] and [StructErr].
+//	// generated (simplified):
+//	func convUser(in User) (out api.User) {
+//		out.ID = in.ID
+//		out.Email = in.Profile.Email
+//		out.Address = in.Profile.Address
+//		return
+//	}
+//
+// With nested discovery enabled, Convgen no longer tries to match User.Profile
+// with a non-existent api.User.Profile.
 func DiscoverNested(inPath, outPath Path) Option[no, no, yes, no, no] {
 	panic("convgen: not generated")
 }

@@ -226,7 +226,7 @@ func (d structDiscovery) DiscoverY(add addFunc[structField], del deleteFunc) err
 
 // discoverFields discovers fields of the given struct object and adds them.
 func (d structDiscovery) discoverFields(owner Object, add addFunc[structField]) {
-	for f := range owner.Type().Struct.Fields() {
+	for f := range owner.Type().Deref().Struct.Fields() {
 		field := structField{
 			owner: owner,
 			field: f,
@@ -245,7 +245,7 @@ func (d structDiscovery) discoverGetters(owner Object, add addFunc[structField])
 		return
 	}
 
-	t := owner.Type()
+	t := owner.Type().Deref()
 	if !t.IsNamed() {
 		return
 	}
@@ -279,7 +279,7 @@ func (d structDiscovery) discoverSetters(owner Object, add addFunc[structField])
 		return
 	}
 
-	t := owner.Type()
+	t := owner.Type().Deref()
 	if !t.IsNamed() {
 		return
 	}
@@ -508,11 +508,14 @@ func (as structAssigner) writeMatchesCode(w *codefmt.Writer, matches []matchAssi
 			if x.IsStruct() && cursorX < len(pathX) {
 				f, _ := x.StructField(pathX[cursorX])
 				next(typeinfo.TypeOf(f.Type()), y, cursorX+1, cursorY)
-			} else if x.IsPointer() {
+				return
+			}
+			if x.IsPointer() {
 				// Unwrap pointer to the nested X field.
 				w.Printf("if %s.%s != nil {\n", varX, strings.Join(pathX[:cursorX], "."))
 				next(*x.Elem, y, cursorX, cursorY)
 				w.Printf("}\n")
+				return
 			}
 		}
 
@@ -521,22 +524,25 @@ func (as structAssigner) writeMatchesCode(w *codefmt.Writer, matches []matchAssi
 			if y.IsStruct() && cursorY < len(pathY) {
 				f, _ := y.StructField(pathY[cursorY])
 				next(x, typeinfo.TypeOf(f.Type()), cursorX, cursorY+1)
-			} else if y.IsPointer() {
-				// Assign a value at the pointer to the nested Y field.
-				varTmpY := w.Name(strings.Join(append([]string{varY}, pathY[:cursorY]...), "."))
-				w.Printf("var %s %t\n", varTmpY, y.Elem)
-				w.Printf("%s.%s = &%s\n", varY, strings.Join(pathY[:cursorY], "."), varTmpY)
-				next(x, *y.Elem, cursorX, cursorY)
+				return
 			}
+			if y.IsPointer() {
+				// Assign a value at the pointer to the nested Y field.
+				w.Printf("if %s.%s == nil {\n", varY, strings.Join(pathY[:cursorY], "."))
+				w.Printf("%s.%s = new(%t)\n", varY, strings.Join(pathY[:cursorY], "."), y.Elem)
+				w.Printf("}\n")
+				next(x, *y.Elem, cursorX, cursorY)
+				return
+			}
+		}
+
+		// We have reached the end of both prefixes, so we can write the field
+		// assignments.
+		for _, m := range matches {
+			as.writeFieldAssignCode(w, m, varX, varY, varErr, labelEnd)
 		}
 	}
 	next(as.x.Type(), as.y.Type(), 0, 0)
-
-	// We have reached the end of both prefixes, so we can write the field
-	// assignments.
-	for _, m := range matches {
-		as.writeFieldAssignCode(w, m, varX, varY, varErr, labelEnd)
-	}
 }
 
 // writeFieldAssignCode writes code to assign a field X to a field Y.

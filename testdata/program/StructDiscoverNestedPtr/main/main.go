@@ -64,12 +64,10 @@ var YtoX0 = convgen.Struct[Y, X0](nil,
 func main() {
 	x := X{A: 1, C1: &XX{B: 2, C2: &XXX{C: 3}}}
 	y := XtoY(x)
-	fmt.Println(y)       // Output: {1 2 3}
-	fmt.Println(YtoX(y)) // Output: {1 {2 {3}}}
-
-	fmt.Println(XXtoY(*x.C1)) // Output: {0 2 3}
-	fmt.Println(YtoXX(y))     // Output: {2 {3}}
-
+	fmt.Println(y)                                        // Output: {1 2 3}
+	fmt.Println(YtoX(y).A, YtoX(y).C1.B, YtoX(y).C1.C2.C) // Output: 1 2 3
+	fmt.Println(XXtoY(*x.C1))                             // Output: {0 2 3}
+	fmt.Println(YtoXX(y).B, YtoXX(y).C2.C)                // Output: 2 3
 	fmt.Println(X0toY(X0{C1: &XX{B: 2, C2: &XXX{C: 3}}})) // Output: {0 2 3}
-	fmt.Println(YtoX0(y))                                 // Output: {{2 {3}}}
+	fmt.Println(YtoX0(y).C1.B, YtoX0(y).C1.C2.C)          // Output: 2 3
 }

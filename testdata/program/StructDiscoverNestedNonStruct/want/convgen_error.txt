@@ -1,0 +1,2 @@
+main/main.go:18:25: must be struct or *struct for nested discovery
+main/main.go:19:25: must be struct or *struct for nested discovery

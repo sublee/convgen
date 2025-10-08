@@ -692,11 +692,23 @@ func (p *Parser) ParseOptionDiscoverNested(c *Config, call *ast.CallExpr, ps par
 		return codefmt.Errorf(p, call, "at least one parameter must be non-nil")
 	}
 
-	if err := ps.ValidatePath(p, pathX, elemX.Pos()); err != nil {
-		errs = errors.Join(errs, err)
+	if pathX.IsValid() {
+		if err := ps.ValidatePath(p, pathX, elemX.Pos()); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if !typeinfo.TypeOf(pathX.StructField[len(pathX.StructField)-1].Type()).Deref().IsStruct() {
+			err := codefmt.Errorf(p, elemX, "must be struct or *struct for nested discovery")
+			errs = errors.Join(errs, err)
+		}
 	}
-	if err := ps.ValidatePath(p, pathY, elemY.Pos()); err != nil {
-		errs = errors.Join(errs, err)
+	if pathY.IsValid() {
+		if err := ps.ValidatePath(p, pathY, elemY.Pos()); err != nil {
+			errs = errors.Join(errs, err)
+		}
+		if !typeinfo.TypeOf(pathY.StructField[len(pathY.StructField)-1].Type()).Deref().IsStruct() {
+			err := codefmt.Errorf(p, elemY, "must be struct or *struct for nested discovery")
+			errs = errors.Join(errs, err)
+		}
 	}
 	if errs != nil {
 		return errs

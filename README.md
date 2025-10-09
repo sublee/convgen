@@ -1,5 +1,7 @@
 # Convgen
 
+![Convgen Logo](assets/convgen.jpg)]
+
 Convgen generates **type-to-type conversion code** for Go with **type-safe
 configuration** and **detailed diagnostics**.
 

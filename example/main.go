@@ -24,7 +24,7 @@ var mod = convgen.Module(
 
 var (
 	PBtoDB        = convgen.Struct[*pb.Job, db.Job](mod)
-	PBtoDB_status = convgen.Enum[pb.Status, db.JobStatus](mod, db.JobStatusTodo, convgen.MatchSkip(pb.Status_STATUS_UNSPECIFIED, convgen.Missing))
+	PBtoDB_status = convgen.Enum[pb.Status, db.JobStatus](mod, db.JobStatusTodo, convgen.MatchSkip(pb.Status_STATUS_UNSPECIFIED, nil))
 	DBtoPB        = convgen.Struct[db.Job, *pb.Job](mod)
 	DBtoPB_status = convgen.Enum[db.JobStatus, pb.Status](mod, pb.Status_STATUS_UNSPECIFIED)
 )

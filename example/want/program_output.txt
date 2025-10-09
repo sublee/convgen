@@ -1,4 +1,0 @@
-db.Job{ID:42, Status:"doing"}
-{"id":"42","status":"STATUS_DOING"}
-api.Job{Id:"42", Status:"doing"}
-{"id":"42","status":"STATUS_DOING"}

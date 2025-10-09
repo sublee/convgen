@@ -38,7 +38,7 @@ func EncodeUser(in User) (out api.User) {
 
 ## Features
 
-- **Code generation for automatic type conversions**
+- **Code generation for automatic type conversions**  
   Convgen generates conversion code at compile time, so there's no runtime
   reflection overhead. It supports conversions between structs, unions
   (interfaces with multiple implementations), and enums (const groups),
@@ -53,7 +53,7 @@ func EncodeUser(in User) (out api.User) {
   convgen.EnumErr[Status, api.Status] // func(Status) (api.Status, error)
   ```
 
-- **Type-safe configuration that survives refactoring**
+- **Type-safe configuration that survives refactoring**  
   All options are validated at compile time — no struct tags, strings, or
   comment-based directives.
 
@@ -66,7 +66,7 @@ func EncodeUser(in User) (out api.User) {
   convgen.Match(User{}.Name, api.User{}.Username)
   ```
 
-- **Batched diagnostics instead of one-error-at-a-time**
+- **Batched diagnostics instead of one-error-at-a-time**  
   *All* matching and conversion errors in a single pass are reported together,
   so you can fix everything at once instead of stopping at the first error. In
   addition, Convgen provides [Lint](#lint) support for real-time feedback during

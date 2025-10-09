@@ -49,7 +49,9 @@ var EncodeUser = convgen.Struct[User, api.User](nil,
   
 - **Detailed diagnostics**  
   *All* matching and conversion errors in a single pass are reported together,
-  so you can fix everything at once instead of stopping at the first error.
+  so you can fix everything at once instead of stopping at the first error. In
+  addition, Convgen provides [Lint](#lint) support for real-time feedback during
+  development.
 
   ```
   main.go:10:10: invalid match between User and api.User
@@ -108,6 +110,52 @@ configuration** and **comprehensive diagnostics** to
         return
     }
     ```
+
+## Lint
+
+Convgen provides a [golangci-lint](https://github.com/golangci/golangci-lint)
+plugin that validates Convgen directives during development inside your IDE.
+
+It's not an official plugin, so you need to build it manually:
+
+```bash
+make golangci-lint-convgen
+```
+
+Then, add the following configuration to your `.golangci.yaml`. Because Convgen
+directives are only valid when the `convgen` build tag is set, make sure to
+include it under the `run.build-tags` section:
+
+```yaml
+version: "2"
+
+run:
+  build-tags:
+    - convgen
+
+linters:
+  settings:
+    custom:
+      convgen:
+        type: module
+```
+
+Now the `golangci-lint-convgen` binary can validate Convgen directives in your
+project. To make this process seamless in your IDE, you can configure it as the
+default linter. For Visual Studio Code, add the following to your settings:
+
+```json
+{
+  "go.lintTool": "golangci-lint-v2",
+  "go.lintFlags": ["--build-tags=convgen"],
+  "go.alternateTools": {
+    "golangci-lint-v2": "/path/to/golangci-lint-convgen",
+  }
+}
+```
+
+With this setup, your Convgen directives will be validated in real time as you
+code.
 
 ## License
 

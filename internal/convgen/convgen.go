@@ -196,61 +196,8 @@ func (cg *Convgen) mergeCode() {
 				first = false
 			}
 
-			// Erase convgen.Module()
-			decl = astutil.Apply(decl, func(c *astutil.Cursor) bool {
-				if call, ok := c.Node().(*ast.CallExpr); ok {
-					if cg.p.IsDirective(call, "Module") {
-						// HACK: printer.Fprint does not validate the name of an
-						// Ident node. It can be used to inject arbitrary code
-						// including comments at the desired position.
-						c.Replace(&ast.Ident{Name: "struct{}{} // convgen module erased"})
-						return false
-					}
-				}
-				return true
-			}, nil).(ast.Decl)
-
-			// Erase converter injectors
-			decl = astutil.Apply(decl, func(c *astutil.Cursor) bool {
-				spec, ok := c.Node().(*ast.ValueSpec)
-				if !ok {
-					return true
-				}
-
-				// Find non-convgen values
-				var names []*ast.Ident
-				var values []ast.Expr
-				for i := range spec.Names {
-					if i >= len(spec.Values) {
-						// Enum consts may not have values
-						names = append(names, spec.Names[i])
-						continue
-					}
-
-					if _, ok := cg.convs[spec.Values[i].Pos()]; !ok {
-						names = append(names, spec.Names[i])
-						values = append(values, spec.Values[i])
-					}
-				}
-
-				if len(names) == 0 {
-					// Input:  var ( a = convgen.Struct(...) )
-					// Output: var ()
-					c.Delete()
-				} else {
-					// Input:  var ( a, b = convgen.Struct(...), 42 )
-					// Output: var ( b = 42 )
-					c.Replace(&ast.ValueSpec{
-						Doc:     spec.Doc,
-						Names:   names,
-						Type:    spec.Type,
-						Values:  values,
-						Comment: spec.Comment,
-					})
-				}
-
-				return false
-			}, nil).(ast.Decl)
+			// Erase Convgen directives
+			decl = cg.eraseDirectives(decl)
 
 			// Skip empty declarations
 			if gen, ok := decl.(*ast.GenDecl); ok {
@@ -270,6 +217,87 @@ func (cg *Convgen) mergeCode() {
 			fmt.Fprintf(cg.buf, "\n\n")
 		}
 	}
+}
+
+func (cg *Convgen) eraseDirectives(decl ast.Decl) ast.Decl {
+	decl = astutil.Apply(decl, func(c *astutil.Cursor) bool {
+		spec, ok := c.Node().(*ast.ValueSpec)
+		if !ok {
+			return true
+		}
+
+		var names []*ast.Ident
+		var values []ast.Expr
+		for i := range spec.Names {
+			if i >= len(spec.Values) {
+				// Enum consts may not have values
+				// e.g., const ( A = iota; B; C )
+				names = append(names, spec.Names[i])
+				continue
+			}
+
+			if call, ok := spec.Values[i].(*ast.CallExpr); ok {
+				if cg.p.IsDirective(call, "Module") {
+					// Erase convgen.Module directive
+					continue
+				}
+			}
+
+			if _, ok := cg.convs[spec.Values[i].Pos()]; ok {
+				// Erase converter injectors
+				continue
+			}
+
+			// Non-directive value, keep it
+			names = append(names, spec.Names[i])
+			values = append(values, spec.Values[i])
+		}
+
+		if len(names) == 0 {
+			// Input:  var ( a = convgen.Struct(...) )
+			// Output: var ()
+			c.Delete()
+		} else {
+			// Input:  var ( a, b = convgen.Struct(...), 42 )
+			// Output: var ( b = 42 )
+			c.Replace(&ast.ValueSpec{
+				Doc:     spec.Doc,
+				Names:   names,
+				Type:    spec.Type,
+				Values:  values,
+				Comment: spec.Comment,
+			})
+		}
+
+		return false
+	}, nil).(ast.Decl)
+
+	// Erase remaining module references. Assignments to blank identifiers are
+	// allowed by the validator but must still be replaced to avoid importing
+	// Convgen at runtime.
+	decl = astutil.Apply(decl, func(c *astutil.Cursor) bool {
+		id, ok := c.Node().(*ast.Ident)
+		if !ok {
+			return true
+		}
+
+		obj := cg.p.Pkg().TypesInfo.ObjectOf(id)
+		if obj == nil {
+			return false
+		}
+
+		if _, ok := cg.mods[obj.Pos()]; !ok {
+			return false
+		}
+
+		// HACK: printer.Fprint does not validate the name of an Ident node. It
+		// can be used to inject arbitrary code including comments at the
+		// desired position.
+		garbage := "(*struct{})(/* convgen module erased */ nil)"
+		c.Replace(&ast.Ident{Name: garbage})
+		return false
+	}, nil).(ast.Decl)
+	return decl
 }
 
 func (cg *Convgen) frameCode() []byte {

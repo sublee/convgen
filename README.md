@@ -7,7 +7,7 @@
 </p>
 
 <h1 align="center">Convgen</h1>
-<p align="center"><i>Refactorable conversion code generator for Go</i></p>
+<p align="center"><i>Refactor-safe type conversion codegen for Go</i></p>
 
 <p align="center">
 <a href="https://github.com/sublee/convgen/actions/workflows/ci.yaml"><img src="https://github.com/sublee/convgen/actions/workflows/ci.yaml/badge.svg" alt="CI"></a>
@@ -38,7 +38,7 @@ func EncodeUser(in User) (out api.User) {
 
 ## Features
 
-- **Code generation for automatic type conversions**  
+- **Automatic type conversions by codegen**  
   Convgen generates conversion code at compile time, so there's no runtime
   reflection overhead. It supports conversions between structs, unions
   (interfaces with multiple implementations), and enums (const groups),
@@ -53,7 +53,7 @@ func EncodeUser(in User) (out api.User) {
   convgen.EnumErr[Status, api.Status] // func(Status) (api.Status, error)
   ```
 
-- **Type-safe configuration that survives refactoring**  
+- **Refactor-safe configuration**  
   All options are validated at compile time — no struct tags, strings, or
   comment-based directives.
 
@@ -66,7 +66,7 @@ func EncodeUser(in User) (out api.User) {
   convgen.Match(User{}.Name, api.User{}.Username)
   ```
 
-- **Batched diagnostics instead of one-error-at-a-time**  
+- **Batched diagnostics**  
   *All* matching and conversion errors in a single pass are reported together,
   so you can fix everything at once instead of stopping at the first error. In
   addition, Convgen provides [Lint](#lint) support for real-time feedback during
@@ -91,9 +91,8 @@ refactoring becomes difficult when target types change. In contrast, Wire offers
 type-safe configuration and detailed diagnostics, but focuses on dependency
 injection.
 
-Convgen combines the best of both worlds, bringing **type-safe configuration**
-and **comprehensive diagnostics** to
-**type conversion code generation**.
+Convgen combines the best of both worlds, bringing **refactor-safe configuration**
+and **batched diagnostics** to **automatic type conversions by codegen**.
 
 To compare Convgen and goverter, see [cmd/vs-goverter](cmd/vs-goverter)
 directory.

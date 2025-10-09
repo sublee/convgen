@@ -1,5 +1,8 @@
 # Convgen
 
+[![CI](https://github.com/sublee/convgen/actions/workflows/ci.yaml/badge.svg)](https://github.com/sublee/convgen/actions/workflows/ci.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sublee/convgen.svg)](https://pkg.go.dev/github.com/sublee/convgen)
+
 > [!WARNING]
 > Convgen is in early development. If you have any feedback, please open an
 > issue.

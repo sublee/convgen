@@ -1,14 +1,17 @@
-# Convgen
-
-[![CI](https://github.com/sublee/convgen/actions/workflows/ci.yaml/badge.svg)](https://github.com/sublee/convgen/actions/workflows/ci.yaml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/sublee/convgen.svg)](https://pkg.go.dev/github.com/sublee/convgen)
-
 > [!WARNING]
 > Convgen is in early development. If you have any feedback, please open an
 > issue.
 
 <p align="center">
 <img src="assets/convgen.png" alt="Convgen Logo" width="320" />
+</p>
+
+<h1 align="center">Convgen</h1>
+<p align="center"><i>Refactorable conversion code generator for Go</i></p>
+
+<p align="center">
+<a href="https://github.com/sublee/convgen/actions/workflows/ci.yaml"><img src="https://github.com/sublee/convgen/actions/workflows/ci.yaml/badge.svg" alt="CI"></a>
+<a href="https://pkg.go.dev/github.com/sublee/convgen"><img src="https://pkg.go.dev/badge/github.com/sublee/convgen.svg" alt="Go Reference"></a>
 </p>
 
 Convgen generates **type-to-type conversion code** for Go with **type-safe

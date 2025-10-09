@@ -63,7 +63,7 @@ func (ps structParsers) walk(p *Parser, expr ast.Expr, owner typeinfo.Type) (*Pa
 			return nil, err
 		}
 
-		id, ok := ast.Unparen(x.Type).(*ast.Ident)
+		id, ok := tailIdent(x.Type)
 		if !ok {
 			// struct{}{}
 			return nil, err
@@ -94,7 +94,7 @@ func (ps structParsers) walk(p *Parser, expr ast.Expr, owner typeinfo.Type) (*Pa
 			return nil, err
 		}
 
-		id, ok := ast.Unparen(star.X).(*ast.Ident)
+		id, ok := tailIdent(star.X)
 		if !ok {
 			// (*struct{})(nil)
 			return nil, err

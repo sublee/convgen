@@ -1,5 +1,9 @@
 # Convgen
 
+> [!WARNING]
+> Convgen is in early development. If you have any feedback, please open an
+> issue.
+
 <p align="center">
 <img src="assets/convgen.png" alt="Convgen Logo" width="320" />
 </p>

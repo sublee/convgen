@@ -1,21 +1,38 @@
 # Convgen
 
-Type-safe conversion code generator for Go.
+Convgen generates **type-to-type conversion code** for Go with **type-safe
+configuration** and **detailed diagnostics**.
 
-## Overview
-
-Convgen eliminates tons of manual boilerplate code in type conversion. Declare a conversion with a type pair and its configuration once, and the generator produces the converter implementation. Type-safe settings catch configuration errors at compile time, while unmatched fields are diagnosed at generation time, enabling fast and confident refactoring.
+```go
+//go:build convgen
+var EncodeUser = convgen.Struct[User, api.User](nil,
+    convgen.RenameReplace("", "", "Id", "ID"), // Replace Id with ID in output types before matching
+    convgen.Match(User{}.Name, api.User{}.Username), // Explicit field matching
+)
+```
 
 ## Features
 
-- **Struct-to-struct** conversions with automatic field matching
-- **Enum-to-enum** conversions with value mapping
-- **Union-to-union** conversions for idiomatic interface patterns
-- **Type-safe configuration** - catch errors at compile time
-- **Flexible renaming rules** - handle naming convention differences
-- **Custom conversion functions** - integrate your own logic
-- **Error-aware conversions** - support fallible transformations
-- **Module system** - share configurations and reuse converters
+- **Struct, Union, and Enum conversions**  
+  Automatically matches fields, implementations, and members by name.
+- **Type-safe configuration**  
+  All options are validated at compile time — no reflection, tags, string, or
+  comment-based directives.
+- **Detailed diagnostics**  
+  *All* matching and conversion errors in a single pass are reported together,
+  so you can fix everything at once instead of stopping at the first error.
+
+## Motivation
+
+Convgen is inspired by both [goverter](https://github.com/jmattheis/goverter)
+and [Wire](https://github.com/google/wire). While goverter is powerful for
+generating type conversion code, it relies on comment-based directives that are
+not validated at compile time. Moreover, because it stops at the first error,
+refactoring becomes difficult when target types change. In contrast, Wire offers
+type-safe configuration and detailed diagnostics, but focuses on dependency
+injection. Convgen combines the best of both worlds, bringing **type-safe
+configuration** and **comprehensive diagnostics** to
+**type conversion code generation**.
 
 ## Installation
 

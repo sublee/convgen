@@ -1,8 +1,8 @@
-# Convgen vs. Goverter
+# Convgen vs. goverter
 
 This directory contains code to compare
 [Convgen](https://github.com/sublee/convgen) and
-[Goverter](https://github.com/jmattheis/goverter).
+[goverter](https://github.com/jmattheis/goverter).
 
 Generated code is already checked in. But you can regenerate it by running:
 

@@ -92,8 +92,8 @@ Convgen combines the best of both worlds, bringing **type-safe configuration**
 and **comprehensive diagnostics** to
 **type conversion code generation**.
 
-To compare Convgen and goverter, see
-[cmd/vs-goverter/README.md](cmd/vs-goverter/README.md).
+To compare Convgen and goverter, see [cmd/vs-goverter](cmd/vs-goverter)
+directory.
 
 ## Quick Start
 

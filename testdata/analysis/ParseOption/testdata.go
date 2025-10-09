@@ -8,7 +8,7 @@ var renameToLower = convgen.RenameToLower(true, true) // want `cannot assign Ren
 
 func asis[T any](T) T { return *new(T) }
 
-var M = (convgen.Module(
+var m = (convgen.Module(
 	renameToLower, // want `option must be inlined, not assigned to variable`
 
 	asis(convgen.RenameToLower(true, true)), // want `option must be convgen directive`

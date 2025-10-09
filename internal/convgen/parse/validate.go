@@ -3,7 +3,10 @@ package parse
 import (
 	"errors"
 	"go/ast"
+	"go/token"
 	"strings"
+
+	"golang.org/x/tools/go/ast/astutil"
 
 	"github.com/sublee/convgen/internal/codefmt"
 )
@@ -14,13 +17,13 @@ import (
 // Many validation rules are implemented in the expected paths by narrow parsing
 // functions. But some rules need to be checked globally. That's what this
 // function does.
-func (p *Parser) Validate() error {
+func (p *Parser) Validate(mods map[token.Pos]*Module) error {
 	var errs error
 	for _, file := range p.Pkg().Syntax {
 		errs = errors.Join(errs, p.validateConstraint(file))
-		errs = errors.Join(errs, p.validateModulesInsideFunc(file))
 		errs = errors.Join(errs, p.validateAssignedDirectives(file))
 	}
+	errs = errors.Join(errs, p.validateModuleUsages(mods))
 	return errs
 }
 
@@ -46,79 +49,6 @@ func (p *Parser) validateConstraint(file *ast.File) error {
 
 	// This file imports convgen but has no "//go:build convgen" constraint
 	return codefmt.Errorf(p, convgenImport, `file must have "//go:build convgen" constraint when importing convgen`)
-}
-
-// validateModuleInsideFunc validates that no module is assigned inside a
-// function.
-//
-// Convgen module must be determined at build time and must not give the
-// impression that anything can be modified at runtime. Therefore, assignments
-// to package-level variables or direct inlining into injectors are allowed, but
-// assignments inside functions are not allowed. If we allow assignments inside
-// functions, it could give the false expectation that reassigning the variable
-// would override the module's configuration.
-//
-//	// good: package-level variable
-//	var mod = convgen.Module(...)
-//
-//	// good: inline in injector
-//	var conv = convgen.Struct[X, Y](convgen.Module(...))
-//
-//	// bad: inside function
-//	func MyFunc() {
-//		mod := convgen.Module(...)
-//		...
-//	}
-func (p *Parser) validateModulesInsideFunc(file *ast.File) error {
-	if !hasGoBuildConvgen(file) {
-		return nil
-	}
-
-	var errs error
-	validate := func(fun ast.Node) {
-		ast.Inspect(fun, func(node ast.Node) bool {
-			switch node := node.(type) {
-			case *ast.ValueSpec, *ast.AssignStmt:
-				ast.Inspect(node, func(node ast.Node) bool {
-					call, ok := node.(*ast.CallExpr)
-					if !ok || !p.IsDirective(call, "Module") {
-						return true
-					}
-
-					err := codefmt.Errorf(p, call, "cannot assign module to variable inside function")
-					errs = errors.Join(errs, err)
-					return false
-				})
-				return false
-			}
-			return true
-		})
-	}
-
-	for _, decl := range file.Decls {
-		switch decl := decl.(type) {
-		case *ast.FuncDecl:
-			// func F() { ... }
-			validate(decl)
-
-		case *ast.GenDecl:
-			for _, spec := range decl.Specs {
-				vs, ok := spec.(*ast.ValueSpec)
-				if !ok {
-					continue
-				}
-
-				for _, value := range vs.Values {
-					if fun, ok := value.(*ast.FuncLit); ok {
-						// var F = func() { ... }
-						validate(fun)
-					}
-				}
-			}
-		}
-	}
-
-	return errs
 }
 
 // validateAssignedDirectives checks illegal assignments of Convgen directives.
@@ -168,4 +98,113 @@ func (p *Parser) validateAssignedDirectives(file *ast.File) error {
 		return true
 	})
 	return errs
+}
+
+// validateModuleUsages checks illegal references to modules.
+//
+// Modules are only allowed to be assigned to variables (except exported ones)
+// or used as arguments to Convgen directives. Any other usages are illegal,
+// because modules will be removed at code generation, and any remaining
+// references to modules will cause compilation errors.
+func (p *Parser) validateModuleUsages(mods map[token.Pos]*Module) error {
+	var errs error
+	blanks := p.findBlankValues()
+	for _, file := range p.Pkg().Syntax {
+		astutil.Apply(file, func(c *astutil.Cursor) bool {
+			if call, ok := c.Node().(*ast.CallExpr); ok {
+				if p.IsDirective(call, "") {
+					// A module can be used by Convgen directives. That's fine.
+					return false
+				}
+				return true
+			}
+
+			// We will check all use of identifiers.
+			id, ok := c.Node().(*ast.Ident)
+			if !ok {
+				return true
+			}
+
+			if _, ok := blanks[id.Pos()]; ok {
+				// Assigned to blank identifier. That's fine.
+				return false
+			}
+
+			obj := p.pkg.TypesInfo.ObjectOf(id)
+			if obj == nil {
+				// Cannot resolve identifier. Skip it.
+				return false
+			}
+
+			mod, ok := mods[obj.Pos()]
+			if !ok {
+				// Not a module identifier. Skip it.
+				return false
+			}
+
+			if id.IsExported() {
+				err := codefmt.Errorf(p, id, "cannot export module %q; removed at code generation", mod.Name)
+				errs = errors.Join(errs, err)
+				return false
+			}
+
+			if id.Pos() == obj.Pos() {
+				// This is the module identifier declaration. That's fine.
+				return false
+			}
+
+			err := codefmt.Errorf(p, id, "cannot use module %q outside convgen directives; removed at code generation", mod.Name)
+			errs = errors.Join(errs, err)
+			return false
+		}, nil)
+	}
+	return errs
+}
+
+// findBlankValues finds all expressions assigned to blank identifier (_) by its
+// position.
+func (p *Parser) findBlankValues() map[token.Pos]struct{} {
+	blanks := make(map[token.Pos]struct{})
+	for _, file := range p.Pkg().Syntax {
+		astutil.Apply(file, func(c *astutil.Cursor) bool {
+			switch node := c.Node().(type) {
+			case *ast.ValueSpec:
+				if len(node.Names) == len(node.Values) {
+					// var a = b
+					// var c, d = e, f
+					for i, name := range node.Names {
+						if name.Name == "_" {
+							blanks[node.Values[i].Pos()] = struct{}{}
+						}
+					}
+				} else if len(node.Names) > 1 && len(node.Values) == 1 {
+					// var a, b = f()
+					for _, name := range node.Names {
+						if name.Name == "_" {
+							blanks[node.Values[0].Pos()] = struct{}{}
+						}
+					}
+				}
+			case *ast.AssignStmt:
+				if len(node.Lhs) == len(node.Rhs) {
+					// a := b
+					// c, d := e, f
+					for i, lh := range node.Lhs {
+						if id, ok := lh.(*ast.Ident); ok && id.Name == "_" {
+							blanks[node.Rhs[i].Pos()] = struct{}{}
+						}
+					}
+				} else if len(node.Lhs) > 1 && len(node.Rhs) == 1 {
+					// a, b := f()
+					for _, lh := range node.Lhs {
+						if id, ok := lh.(*ast.Ident); ok && id.Name == "_" {
+							blanks[node.Rhs[0].Pos()] = struct{}{}
+						}
+					}
+				}
+			}
+			return true
+		}, nil)
+	}
+	return blanks
 }

@@ -5,7 +5,7 @@ package testdata
 import "github.com/sublee/convgen"
 
 var (
-	Mod  = convgen.Module()                        // ok
+	_    = convgen.Module()                        // ok
 	Conv = convgen.Struct[struct{}, struct{}](nil) // ok
 )
 

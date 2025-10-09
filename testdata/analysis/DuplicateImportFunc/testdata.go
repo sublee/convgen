@@ -17,7 +17,7 @@ type (
 	MyInt  int
 )
 
-var M = convgen.Module(
+var _ = convgen.Module(
 	// ImportFunc
 	convgen.ImportFunc(strconv.Itoa),
 	convgen.ImportFunc(int2string),                     // want `duplicate int to string converter`

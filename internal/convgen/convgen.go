@@ -59,12 +59,11 @@ func New(pkg *packages.Package) (*Convgen, error) {
 // potential errors are returned by this method. It must be called before
 // [Generate].
 func (cg *Convgen) Build() error {
-	errs := cg.p.Validate()
-
 	// Parse modules and injectors from the package.
-	mods, err := cg.p.ParseModules()
+	mods, errs := cg.p.ParseModules()
 	cg.mods = mods
-	errs = errors.Join(errs, err)
+
+	errs = errors.Join(errs, cg.p.Validate(mods))
 
 	injs, err := cg.p.ParseInjectors(cg.ns, mods)
 	errs = errors.Join(errs, err)

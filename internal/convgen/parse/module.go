@@ -41,13 +41,12 @@ func (p *Parser) ParseModules() (map[token.Pos]*Module, error) {
 
 	for _, file := range p.ConvgenGoFiles() {
 		for id, call := range p.FindModules(file) {
-			if id.Name == "_" {
-				// Blank identifier cannot be referred later. No need to parse a
-				// module that is not referred anywhere.
-				continue
+			name := id.Name
+			if name == "_" {
+				name = ""
 			}
 
-			mod, err := p.ParseModule(call, id.Name)
+			mod, err := p.ParseModule(call, name)
 			mods[id.Pos()] = mod
 			errs = errors.Join(errs, err)
 		}

@@ -28,7 +28,7 @@ var Match3 = convgen.Struct[matchX, matchY](nil,
 
 // cross type is not allowed
 var Match4 = convgen.Struct[matchX, matchY](nil,
-	convgen.Match(matchY{}.B, matchY{}.B), // want `field must belong to matchX{}; got matchY{}`
+	convgen.Match(matchY{}.B, matchY{}.B), // want `field should belong to matchX{}; got matchY{}`
 )
 
 // Missing is not allowed in Match

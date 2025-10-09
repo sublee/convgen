@@ -159,8 +159,8 @@ code.
 
 ## License
 
-MIT License -- see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ## Author
 
-[Heungsub Lee](https://subl.ee/) and ChatGPT
+[Heungsub Lee](https://subl.ee/), with assistance from ChatGPT

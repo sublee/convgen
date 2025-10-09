@@ -29,7 +29,7 @@ func (ps structParsers) parse(p *Parser, expr ast.Expr, owner typeinfo.Type) (*P
 	}
 
 	if len(path.StructField) == 0 {
-		panic(1)
+		panic("unreachable: struct field must be at least one")
 	}
 	if len(path.StructField) == 1 {
 		return nil, codefmt.Errorf(p, expr, "cannot use %t itself as a field", owner)
@@ -37,8 +37,12 @@ func (ps structParsers) parse(p *Parser, expr ast.Expr, owner typeinfo.Type) (*P
 	return path, nil
 }
 
-func (ps structParsers) walk(p *Parser, expr ast.Expr, owner typeinfo.Type) (*Path, error) {
+func (ps structParsers) walk(p *Parser, expr ast.Expr, owner typeinfo.Type) (*Path, error) { // nolint:gocyclo
 	expr = ast.Unparen(expr)
+
+	if !owner.Deref().IsNamed() {
+		return nil, codefmt.Errorf(p, expr, "field of anonymous struct is not supported")
+	}
 
 	// Unwrap convgen.Field~ function calls
 	// e.g., convgen.FieldGetter(T{}.GetField) -> T{}.GetField
@@ -51,51 +55,55 @@ func (ps structParsers) walk(p *Parser, expr ast.Expr, owner typeinfo.Type) (*Pa
 
 	switch x := expr.(type) {
 	case *ast.CompositeLit:
+		err := codefmt.Errorf(p, expr, "field should belong to %t{}; got %c", owner, expr)
+
 		// Expression: T{}
 		if len(x.Elts) != 0 {
 			// T{...}
-			return nil, codefmt.Errorf(p, expr, "field should belong to %t{} with empty braces; got %c", owner, expr)
+			return nil, err
 		}
 
 		id, ok := ast.Unparen(x.Type).(*ast.Ident)
 		if !ok {
 			// struct{}{}
-			return nil, codefmt.Errorf(p, expr, "field cannot belong to anonymous struct")
+			return nil, err
 		}
 
 		t := typeinfo.TypeOf(p.Pkg().TypesInfo.TypeOf(id))
 		if !t.Identical(owner.Deref()) {
 			// U{} where U != T
-			return nil, codefmt.Errorf(p, expr, "field should belong to %t{}; got %c", owner, expr)
+			return nil, err
 		}
 
 		obj := p.Pkg().TypesInfo.ObjectOf(id)
 		return &Path{StructField: []types.Object{obj}, Pos: id.Pos()}, nil
 
 	case *ast.CallExpr:
+		err := codefmt.Errorf(p, expr, "field should belong to (*%t)(nil); got %c", owner, expr)
+
 		// Expression: (*T)(nil)
 		if len(x.Args) != 1 || !p.IsNil(x.Args[0]) {
 			// (nil) expected but got (), (nonil), (...)
-			return nil, codefmt.Errorf(p, expr, "field should belong to (*%t)(nil); got %c", owner, expr)
+			return nil, err
 		}
 
 		fun := ast.Unparen(x.Fun)
 		star, ok := fun.(*ast.StarExpr)
 		if !ok {
 			// f(nil) where f != *T
-			return nil, codefmt.Errorf(p, expr, "field should belong to (*%t)(nil); got %c", owner, expr)
+			return nil, err
 		}
 
 		id, ok := ast.Unparen(star.X).(*ast.Ident)
 		if !ok {
 			// (*struct{})(nil)
-			return nil, codefmt.Errorf(p, expr, "field cannot belong to anonymous struct")
+			return nil, err
 		}
 
 		t := typeinfo.TypeOf(p.Pkg().TypesInfo.TypeOf(id))
 		if !t.Identical(owner.Deref()) {
 			// (*U)(nil) where U != T
-			return nil, codefmt.Errorf(p, expr, "field should belong to (*%t)(nil); got %c", owner, expr)
+			return nil, err
 		}
 
 		obj := p.Pkg().TypesInfo.ObjectOf(id)

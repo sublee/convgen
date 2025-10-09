@@ -14,24 +14,30 @@ func f(...any) X { return X{} }
 var Case1 = convgen.Struct[X, X](nil,
 	convgen.Match(X{}.A, X{}.A.B),             // ok
 	convgen.Match(X{}.A, X{}),                 // want `cannot use X itself as a field`
-	convgen.Match(X{}.A, X{Y{1}}.A.B),         // want `field should belong to X\{\} with empty braces; got X\{Y\{1\}\}`
+	convgen.Match(X{}.A, X{Y{1}}.A.B),         // want `field should belong to X\{\}; got X\{Y\{1\}\}`
 	convgen.Match(X{}.A, Y{}.B),               // want `field should belong to X\{\}; got Y\{\}`
-	convgen.Match(X{}.A, struct{ A Y }{}.A.B), // want `field cannot belong to anonymous struct`
+	convgen.Match(X{}.A, struct{ A Y }{}.A.B), // want `field should belong to X\{\}; got struct\{ A Y \}\{\}`
 
 	convgen.Match(X{}.A, (*X)(nil).A.B),             // ok
 	convgen.Match(X{}.A, f().A.B),                   // want `field should belong to \(\*X\)\(nil\); got f\(\)`
 	convgen.Match(X{}.A, f(nil).A.B),                // want `field should belong to \(\*X\)\(nil\); got f\(nil\)`
 	convgen.Match(X{}.A, f(1).A.B),                  // want `field should belong to \(\*X\)\(nil\); got f\(1\)`
 	convgen.Match(X{}.A, (*Y)(nil).B),               // want `field should belong to \(\*X\)\(nil\); got \(\*Y\)\(nil\)`
-	convgen.Match(X{}.A, (*struct{ A Y })(nil).A.B), // want `field cannot belong to anonymous struct`
+	convgen.Match(X{}.A, (*struct{ A Y })(nil).A.B), // want `field should belong to \(\*X\)\(nil\); got \(\*struct\{ A Y \}\)\(nil\)`
 
 	convgen.Match(X{}.A, (&X{}).A.B),    // ok
 	convgen.Match(X{}.A, &(&X{}).A.B),   // ok
 	convgen.Match(X{}.A, (*(&X{})).A.B), // ok
+
+	convgen.Match(X{}.A, 0),           // want `invalid field expression; got 0`
+	convgen.Match(X{}.A, []X{}),       // want `field should belong to X\{\}; got \[\]X\{\}`
+	convgen.Match(X{}.A, map[int]X{}), // want `field should belong to X\{\}; got map\[int\]X\{\}`
 )
 
 var Case2 = convgen.Struct[X, struct{ X }](nil,
-	convgen.Match(X{}.A, struct{ X }{}.X.A.B), // want `field cannot belong to anonymous struct`
+	convgen.Match(X{}.A, struct{ X }{}.X.A.B), // want `field of anonymous struct is not supported`
+	convgen.Match(X{}.A, struct{ X }{}.X),     // want `field of anonymous struct is not supported`
+	convgen.Match(X{}.A, 0),                   // want `field of anonymous struct is not supported`
 )
 
 type Z struct {

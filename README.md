@@ -1,7 +1,7 @@
 # Convgen
 
 <p align="center">
-<img src="assets/convgen.jpg" alt="Convgen Logo" width="320" />
+<img src="assets/convgen.png" alt="Convgen Logo" width="320" />
 </p>
 
 Convgen generates **type-to-type conversion code** for Go with **type-safe

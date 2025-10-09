@@ -15,12 +15,21 @@ Convgen generates **type-to-type conversion code** for Go with **type-safe
 configuration** and **detailed diagnostics**.
 
 ```go
-//go:build convgen
-
+// source:
 var EncodeUser = convgen.Struct[User, api.User](nil,
     convgen.RenameReplace("", "", "Id", "ID"), // Replace Id with ID in output types before matching
     convgen.Match(User{}.Name, api.User{}.Username), // Explicit field matching
 )
+```
+
+```go
+// generated: (simplified)
+func EncodeUser(in User) (out api.User) {
+    out.Id = in.ID
+    out.Username = in.Name
+    out.Email = in.Email
+    return
+}
 ```
 
 ## Features

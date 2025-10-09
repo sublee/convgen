@@ -73,9 +73,14 @@ generating type conversion code, it relies on comment-based directives that are
 not validated at compile time. Moreover, because it stops at the first error,
 refactoring becomes difficult when target types change. In contrast, Wire offers
 type-safe configuration and detailed diagnostics, but focuses on dependency
-injection. Convgen combines the best of both worlds, bringing **type-safe
-configuration** and **comprehensive diagnostics** to
+injection.
+
+Convgen combines the best of both worlds, bringing **type-safe configuration**
+and **comprehensive diagnostics** to
 **type conversion code generation**.
+
+To compare Convgen and goverter, see
+[cmd/vs-goverter/README.md](cmd/vs-goverter/README.md).
 
 ## Quick Start
 

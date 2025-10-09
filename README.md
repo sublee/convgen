@@ -14,8 +14,9 @@
 <a href="https://pkg.go.dev/github.com/sublee/convgen"><img src="https://pkg.go.dev/badge/github.com/sublee/convgen.svg" alt="Go Reference"></a>
 </p>
 
-Convgen generates **type-to-type conversion code** for Go with **type-safe
-configuration** and **detailed diagnostics**.
+Convgen generates type-to-type conversion code for Go automatically. It's
+**type-safe**, **refactorable**, and designed to detect every mismatch with
+**detailed diagnostics**.
 
 ```go
 // source:

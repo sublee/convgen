@@ -129,11 +129,6 @@ func (fac *factory) build(x, y Object) (assigner, error) {
 		return as, err
 	}
 
-	// Identical types
-	if as, err := fac.trySame(x, y); !errors.Is(err, skip) {
-		return as, err
-	}
-
 	// Primitive types
 	if as, err := fac.tryPointer(x, y); !errors.Is(err, skip) {
 		return as, err
@@ -145,6 +140,11 @@ func (fac *factory) build(x, y Object) (assigner, error) {
 		return as, err
 	}
 	if as, err := fac.tryKey(x, y); !errors.Is(err, skip) {
+		return as, err
+	}
+
+	// Identical types
+	if as, err := fac.trySame(x, y); !errors.Is(err, skip) {
 		return as, err
 	}
 

@@ -19,10 +19,9 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.4
-          args: . ./internal/... ./testdata/...
 
       - name: Download dependencies
         run: go mod download
 
       - name: Test
-        run: go test . ./internal/...
+        run: go test ./...

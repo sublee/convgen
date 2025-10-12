@@ -1,7 +1,7 @@
 .PHONY: test cover lint golangci-lint-convgen
 
 test:
-	go test
+	go test ./...
 
 cover:
 	go test -cover -coverpkg .,./internal/... -coverprofile cover.prof

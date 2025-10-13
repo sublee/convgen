@@ -81,27 +81,29 @@ func (p *Parser) IsNil(expr ast.Expr) bool {
 func (p *Parser) ParseFunc(expr ast.Expr, hasErr bool) (typeinfo.Func, error) {
 	expr = ast.Unparen(expr)
 
+	var fn typeinfo.Func
 	if lit, ok := expr.(*ast.FuncLit); ok {
-		fn, err := typeinfo.FuncLitOf[typeinfo.BothXY](p.pkg, lit)
+		fn_, err := typeinfo.FuncLitOf[typeinfo.BothXY](p.pkg, lit)
 		if err != nil {
 			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
 		}
-		return fn, nil
-	}
+		fn = fn_
+	} else {
+		if p.IsNil(expr) {
+			return nil, codefmt.Errorf(p, expr, "cannot use nil as function")
+		}
 
-	if p.IsNil(expr) {
-		return nil, codefmt.Errorf(p, expr, "cannot use nil as function")
-	}
+		id, ok := tailIdent(expr)
+		if !ok {
+			return nil, codefmt.Errorf(p, expr, "cannot use %c as function", expr)
+		}
 
-	id, ok := tailIdent(expr)
-	if !ok {
-		return nil, codefmt.Errorf(p, expr, "cannot use %c as function", expr)
-	}
-
-	obj := p.Pkg().TypesInfo.ObjectOf(id)
-	fn, err := typeinfo.FuncOf[typeinfo.BothXY](obj)
-	if err != nil {
-		return nil, codefmt.Errorf(p, expr, "%s", err.Error())
+		obj := p.Pkg().TypesInfo.ObjectOf(id)
+		fn_, err := typeinfo.FuncOf[typeinfo.BothXY](obj)
+		if err != nil {
+			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
+		}
+		fn = fn_
 	}
 
 	if hasErr && !fn.HasErr() {
@@ -109,7 +111,6 @@ func (p *Parser) ParseFunc(expr ast.Expr, hasErr bool) (typeinfo.Func, error) {
 	} else if !hasErr && fn.HasErr() {
 		return nil, codefmt.Errorf(p, expr, "function must not return error") // unreachable
 	}
-
 	return fn, nil
 }
 
@@ -119,27 +120,29 @@ func (p *Parser) ParseFunc(expr ast.Expr, hasErr bool) (typeinfo.Func, error) {
 func (p *Parser) ParseErrWrap(expr ast.Expr) (typeinfo.Func, error) {
 	expr = ast.Unparen(expr)
 
+	var fn typeinfo.Func
 	if lit, ok := expr.(*ast.FuncLit); ok {
-		fn, err := typeinfo.FuncLitOf[typeinfo.OnlyX](p.pkg, lit)
+		fn_, err := typeinfo.FuncLitOf[typeinfo.OnlyX](p.pkg, lit)
 		if err != nil {
 			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
 		}
-		return fn, nil
-	}
+		fn = fn_
+	} else {
+		id, ok := tailIdent(expr)
+		if !ok {
+			return nil, codefmt.Errorf(p, expr, "cannot use %c as error wrapper", expr)
+		}
 
-	id, ok := tailIdent(expr)
-	if !ok {
-		return nil, codefmt.Errorf(p, expr, "cannot use %c as error wrapper", expr)
-	}
+		obj := p.Pkg().TypesInfo.ObjectOf(id)
+		if _, ok := obj.(*types.Nil); ok {
+			return nil, codefmt.Errorf(p, expr, "cannot use nil as error wrapper")
+		}
 
-	obj := p.Pkg().TypesInfo.ObjectOf(id)
-	if _, ok := obj.(*types.Nil); ok {
-		return nil, codefmt.Errorf(p, expr, "cannot use nil as error wrapper")
-	}
-
-	fn, err := typeinfo.FuncOf[typeinfo.OnlyX](obj)
-	if err != nil {
-		return nil, codefmt.Errorf(p, expr, "%s", err.Error())
+		fn_, err := typeinfo.FuncOf[typeinfo.OnlyX](obj)
+		if err != nil {
+			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
+		}
+		fn = fn_
 	}
 
 	if !fn.X().IsError() {
@@ -148,7 +151,6 @@ func (p *Parser) ParseErrWrap(expr ast.Expr) (typeinfo.Func, error) {
 	if !fn.HasErr() {
 		return nil, codefmt.Errorf(p, expr, "error wrapper must return error") // unreachable
 	}
-
 	return fn, nil
 }
 

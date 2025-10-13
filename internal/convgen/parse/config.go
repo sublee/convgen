@@ -300,9 +300,6 @@ func (p *Parser) ParseOptionImportFunc(c *Config, call *ast.CallExpr, hasErr boo
 	if err != nil {
 		return err
 	}
-	if fn == nil {
-		return codefmt.Errorf(p, call, "%s is not function", call)
-	}
 
 	c.Funcs = append(c.Funcs, fn.WithPos(call.Pos()))
 	c.FuncExprs = append(c.FuncExprs, call)
@@ -318,9 +315,6 @@ func (p *Parser) ParseOptionImportErrWrap(c *Config, call *ast.CallExpr) error {
 	fn, err := p.ParseErrWrap(expr)
 	if err != nil {
 		return err
-	}
-	if fn == nil {
-		return codefmt.Errorf(p, call, "%s is not function", call)
 	}
 
 	c.ErrWraps = append(c.ErrWraps, fn.WithPos(call.Pos()))

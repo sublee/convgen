@@ -45,12 +45,16 @@ func (fac *factory) tryIndex(x, y Object) (*indexAssigner, error) {
 // writeAssignCode writes code that assigns x to y by converting each element.
 func (a indexAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr string) {
 	if a.isSliceY {
+		w.Printf("if len(%s) != 0 {\n", varX)
+		defer w.Printf("}\n")
+
 		w.Printf("%s = make([]%t, len(%s))\n", varY, a.elemY, varX)
 	}
 
 	varI := w.Name("i")
 	varV := w.Name("v")
 	w.Printf("for %s, %s := range %s {\n", varI, varV, varX)
+	defer w.Printf("}\n")
 
 	a.assigner.writeAssignCode(w, varV, varY+"["+varI+"]", varErr)
 	if a.requiresErr() {
@@ -61,6 +65,4 @@ func (a indexAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr str
 		w.Printf("break\n")
 		w.Printf("}\n")
 	}
-
-	w.Printf("}\n")
 }

@@ -75,11 +75,15 @@ func (fac *factory) tryKey(x, y Object) (*keyAssigner, error) {
 // writeAssignCode writes code that assigns x to y by converting each key and
 // element.
 func (a keyAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr string) {
+	w.Printf("if len(%s) != 0 {\n", varX)
+	defer w.Printf("}\n")
+
 	w.Printf("%s = make(map[%t]%t, len(%s))\n", varY, a.keyY, a.elemY, varX)
 
 	varKeyX := w.Name("k")
 	varValX := w.Name("v")
 	w.Printf("for %s, %s := range %s {\n", varKeyX, varValX, varX)
+	defer w.Printf("}\n")
 
 	varKeyY := w.Name("k")
 	w.Printf("var %s %t\n", varKeyY, a.keyY)
@@ -98,6 +102,4 @@ func (a keyAssigner) writeAssignCode(w *codefmt.Writer, varX, varY, varErr strin
 		w.Printf("break\n")
 		w.Printf("}\n")
 	}
-
-	w.Printf("}\n")
 }

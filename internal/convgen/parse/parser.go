@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/build/constraint"
@@ -98,7 +99,10 @@ func (p *Parser) ParseFunc(expr ast.Expr, hasErr bool) (typeinfo.Func, error) {
 			return nil, codefmt.Errorf(p, expr, "cannot use %c as function", expr)
 		}
 
-		obj := p.Pkg().TypesInfo.ObjectOf(id)
+		obj, err := p.getFuncObj(id, expr)
+		if err != nil {
+			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
+		}
 		fn_, err := typeinfo.FuncOf[typeinfo.BothXY](obj)
 		if err != nil {
 			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
@@ -133,9 +137,12 @@ func (p *Parser) ParseErrWrap(expr ast.Expr) (typeinfo.Func, error) {
 			return nil, codefmt.Errorf(p, expr, "cannot use %c as error wrapper", expr)
 		}
 
-		obj := p.Pkg().TypesInfo.ObjectOf(id)
-		if _, ok := obj.(*types.Nil); ok {
-			return nil, codefmt.Errorf(p, expr, "cannot use nil as error wrapper")
+		obj, err := p.getFuncObj(id, expr)
+		if err != nil {
+			if errors.Is(err, errNilFuncObj) {
+				return nil, codefmt.Errorf(p, expr, "cannot use nil as error wrapper")
+			}
+			return nil, codefmt.Errorf(p, expr, "%s", err.Error())
 		}
 
 		fn_, err := typeinfo.FuncOf[typeinfo.OnlyX](obj)
@@ -204,6 +211,48 @@ func (p *Parser) ConvgenGoFiles() []*ast.File {
 	return files
 }
 
+var errNilFuncObj = errors.New("nil function object")
+
+// getFuncObj returns the object of the function in the expression. If the expression is a generic function instance, it creates an object with a generic name,
+// but a function literal signature
+func (p *Parser) getFuncObj(id *ast.Ident, expr ast.Expr) (types.Object, error) {
+	obj := p.Pkg().TypesInfo.ObjectOf(id)
+	if _, ok := obj.(*types.Nil); ok {
+		return nil, errNilFuncObj
+	}
+	objType := obj.Type()
+	declarationSignature, ok := objType.(*types.Signature) // This holds the generic function declaration (func[T any](T) string)
+	if !ok {
+		return nil, fmt.Errorf("cannot get object signature of type %s", objType.String())
+	}
+	instanceType := p.Pkg().TypesInfo.TypeOf(expr)
+	instanceSignature, ok := instanceType.(*types.Signature) // This holds the instance (func (int) string)
+	if !ok {
+		return nil, fmt.Errorf("cannot get object signature of type %s", instanceType.String())
+	}
+	if declarationSignature.TypeParams().Len() > 0 {
+		var name strings.Builder
+		name.WriteString(obj.Name())
+		switch e := expr.(type) {
+		case *ast.IndexExpr:
+			name.WriteString("[")
+			name.WriteString(codefmt.New(p.pkg).Expr(e.Index))
+			name.WriteString("]")
+		case *ast.IndexListExpr:
+			name.WriteString("[")
+			for i, idx := range e.Indices {
+				if i > 0 {
+					name.WriteString(", ")
+				}
+				name.WriteString(codefmt.New(p.pkg).Expr(idx))
+			}
+			name.WriteString("]")
+		}
+		return types.NewFunc(obj.Pos(), obj.Pkg(), name.String(), instanceSignature), nil
+	}
+	return obj, nil
+}
+
 // hasGoBuildConvgen checks if the file has a "//go:build convgen" constraint.
 func hasGoBuildConvgen(file *ast.File) bool {
 	ok := false
@@ -242,6 +291,14 @@ func tailIdent(expr ast.Expr) (*ast.Ident, bool) {
 		// foo.bar.baz
 		//         ^^^
 		return tailIdent(expr.Sel)
+	case *ast.IndexExpr:
+		// foo[T]
+		// ^^^
+		return tailIdent(expr.X)
+	case *ast.IndexListExpr:
+		// foo[T, U]
+		// ^^^
+		return tailIdent(expr.X)
 	}
 	return nil, false
 }

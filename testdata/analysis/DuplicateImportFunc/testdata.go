@@ -12,6 +12,8 @@ func int2string(int) string { return "" }
 
 func string2int(string) (int, error) { return 0, nil }
 
+func Identity[T any](x T) T { return x }
+
 type (
 	TheInt = int
 	MyInt  int
@@ -22,6 +24,11 @@ var _ = convgen.Module(
 	convgen.ImportFunc(strconv.Itoa),
 	convgen.ImportFunc(int2string),                     // want `duplicate int to string converter`
 	convgen.ImportFunc(func(int) string { return "" }), // want `duplicate int to string converter`
+
+	// Generic function instantiations
+	convgen.ImportFunc(Identity[string]), // ok
+	convgen.ImportFunc(Identity[string]), // want `duplicate string to string converter`
+	convgen.ImportFunc(Identity[int]),    // ok
 
 	// Type aliases and defined types
 	convgen.ImportFunc(func(TheInt) string { return "" }), // want `duplicate TheInt to string converter`

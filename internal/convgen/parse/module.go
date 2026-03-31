@@ -37,7 +37,12 @@ type Module struct {
 // ParseModules finds and parses all convgen.Module calls in the parsed files.
 func (p *Parser) ParseModules() (map[token.Pos]*Module, error) {
 	var errs error
-	mods := make(map[token.Pos]*Module)
+
+	type modDecl struct {
+		Name string
+		Call *ast.CallExpr
+	}
+	decls := make(map[token.Pos]modDecl)
 
 	for _, file := range p.ConvgenGoFiles() {
 		for id, call := range p.FindModules(file) {
@@ -46,10 +51,39 @@ func (p *Parser) ParseModules() (map[token.Pos]*Module, error) {
 				name = ""
 			}
 
-			mod, err := p.ParseModule(call, name)
-			mods[id.Pos()] = mod
+			decls[id.Pos()] = modDecl{Name: name, Call: call}
+		}
+	}
+
+	mods := make(map[token.Pos]*Module)
+	visiting := make(map[token.Pos]bool)
+
+	var fetchMod func(token.Pos) (*Module, error)
+	fetchMod = func(pos token.Pos) (*Module, error) {
+		if mod, ok := mods[pos]; ok {
+			return mod, nil
+		}
+		if visiting[pos] {
+			return nil, errors.New("import cycle detected")
+		}
+		decl, ok := decls[pos]
+		if !ok {
+			return nil, nil
+		}
+
+		visiting[pos] = true
+		mod, err := p.ParseModule(decl.Call, decl.Name, fetchMod)
+		if err != nil {
 			errs = errors.Join(errs, err)
 		}
+		// Mark as not visiting even if there is an error to avoid blocking other modules that depend on this module.
+		visiting[pos] = false
+		mods[pos] = mod
+		return mod, err
+	}
+
+	for pos := range decls {
+		_, _ = fetchMod(pos)
 	}
 
 	return mods, errs
@@ -92,7 +126,7 @@ func (p *Parser) FindModules(file *ast.File) iter.Seq2[*ast.Ident, *ast.CallExpr
 
 // ParseModule parses a [convgen.Module] call expression and returns a new
 // module.
-func (p *Parser) ParseModule(call *ast.CallExpr, name string) (*Module, error) {
+func (p *Parser) ParseModule(call *ast.CallExpr, name string, fetchMod func(token.Pos) (*Module, error)) (*Module, error) {
 	// Chain of For* after NewModule
 	calls := []*ast.CallExpr{call}
 	for {
@@ -113,7 +147,7 @@ func (p *Parser) ParseModule(call *ast.CallExpr, name string) (*Module, error) {
 
 	var cfg Config
 	var errs error
-	if err := p.ParseConfig(&cfg, calls[0].Args, nil); err != nil {
+	if err := p.ParseConfig(&cfg, calls[0].Args, nil, fetchMod); err != nil {
 		errs = errors.Join(errs, err)
 	}
 
@@ -121,15 +155,15 @@ func (p *Parser) ParseModule(call *ast.CallExpr, name string) (*Module, error) {
 		switch call.Fun.(*ast.SelectorExpr).Sel.Name {
 		case "ForStruct":
 			cfg.ForStruct = &Config{}
-			err := p.ParseConfig(cfg.ForStruct, call.Args, nil)
+			err := p.ParseConfig(cfg.ForStruct, call.Args, nil, fetchMod)
 			errs = errors.Join(errs, err)
 		case "ForUnion":
 			cfg.ForUnion = &Config{}
-			err := p.ParseConfig(cfg.ForUnion, call.Args, nil)
+			err := p.ParseConfig(cfg.ForUnion, call.Args, nil, fetchMod)
 			errs = errors.Join(errs, err)
 		case "ForEnum":
 			cfg.ForEnum = &Config{}
-			err := p.ParseConfig(cfg.ForEnum, call.Args, nil)
+			err := p.ParseConfig(cfg.ForEnum, call.Args, nil, fetchMod)
 			errs = errors.Join(errs, err)
 		default:
 			panic("unexpected module chain")
@@ -181,7 +215,7 @@ func (p *Parser) newModuleLookup(cfg Config, old *typeinfo.Lookup[typeinfo.Func]
 
 // ParseModuleArg parses a Convgen module type argument from the given
 // expression.
-func (p *Parser) ParseModuleArg(expr ast.Expr, mods map[token.Pos]*Module) (*Module, error) {
+func (p *Parser) ParseModuleArg(expr ast.Expr, fetchMod func(token.Pos) (*Module, error)) (*Module, error) {
 	expr = ast.Unparen(expr)
 
 	// Inline Module Declaration
@@ -194,7 +228,7 @@ func (p *Parser) ParseModuleArg(expr ast.Expr, mods map[token.Pos]*Module) (*Mod
 	// implicit converters. The implicit converters will inherit the module's
 	// configuration.
 	if call, ok := expr.(*ast.CallExpr); ok && p.IsDirective(call, "Module") {
-		return p.ParseModule(call, "")
+		return p.ParseModule(call, "", fetchMod)
 	}
 
 	// Validate identifier
@@ -230,8 +264,11 @@ func (p *Parser) ParseModuleArg(expr ast.Expr, mods map[token.Pos]*Module) (*Mod
 	// This is the most common way to declare and use a module. Multiple
 	// converters can belong to the same package-level module.
 	modPos := p.Pkg().TypesInfo.ObjectOf(id).Pos()
-	mod, ok := mods[modPos]
-	if !ok {
+	mod, err := fetchMod(modPos)
+	if err != nil {
+		return nil, codefmt.Errorf(p, expr, "cannot import module %q: %v", id.Name, err)
+	}
+	if mod == nil {
 		return nil, codefmt.Errorf(p, expr, "cannot find %q module declared by convgen.Module", id.Name)
 	}
 	return mod, nil

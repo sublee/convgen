@@ -215,7 +215,14 @@ func (p *Parser) parseInjector(id *ast.Ident, call *ast.CallExpr, doc, comment *
 	inj.Func = fn
 	errs = errors.Join(errs, err)
 
-	mod, err := p.ParseModuleArg(call.Args[0], mods)
+	fetchMod := func(pos token.Pos) (*Module, error) {
+		if mod, ok := mods[pos]; ok {
+			return mod, nil
+		}
+		return nil, nil // not found
+	}
+
+	mod, err := p.ParseModuleArg(call.Args[0], fetchMod)
 	if err != nil {
 		mod = NilModule() // Prevent nil panic to collect as many errors as possible
 	}
@@ -266,7 +273,7 @@ func (p *Parser) parseInjector(id *ast.Ident, call *ast.CallExpr, doc, comment *
 	// Parse config
 	cfg.DiscoverBySamplePkgX = inj.X().Pkg()
 	cfg.DiscoverBySamplePkgY = inj.Y().Pkg()
-	errs = errors.Join(errs, p.ParseConfig(&cfg, opts, parsers))
+	errs = errors.Join(errs, p.ParseConfig(&cfg, opts, parsers, fetchMod))
 	inj.Config = cfg
 
 	// Register into the module

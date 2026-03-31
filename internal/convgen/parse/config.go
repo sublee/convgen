@@ -160,6 +160,29 @@ func (cfg Config) ForkForEnum() Config {
 	return c
 }
 
+func (cfg *Config) UpdateImport(other Config) {
+	cfg.Update(other)
+
+	if other.ForStruct != nil {
+		if cfg.ForStruct == nil {
+			cfg.ForStruct = &Config{}
+		}
+		cfg.ForStruct.UpdateImport(*other.ForStruct)
+	}
+	if other.ForUnion != nil {
+		if cfg.ForUnion == nil {
+			cfg.ForUnion = &Config{}
+		}
+		cfg.ForUnion.UpdateImport(*other.ForUnion)
+	}
+	if other.ForEnum != nil {
+		if cfg.ForEnum == nil {
+			cfg.ForEnum = &Config{}
+		}
+		cfg.ForEnum.UpdateImport(*other.ForEnum)
+	}
+}
+
 type parsers interface {
 	ParsePathX(p *Parser, expr ast.Expr) (*Path, error)
 	ParsePathY(p *Parser, expr ast.Expr) (*Path, error)
@@ -169,7 +192,7 @@ type parsers interface {
 	ParsePkgY(p *Parser, expr ast.Expr) (*types.Package, error)
 }
 
-func (p *Parser) ParseConfig(cfg *Config, args []ast.Expr, parsers parsers) error {
+func (p *Parser) ParseConfig(cfg *Config, args []ast.Expr, parsers parsers, fetchMod func(token.Pos) (*Module, error)) error {
 	var errs error
 	for _, arg := range args {
 		if _, ok := arg.(*ast.Ident); ok {
@@ -195,7 +218,7 @@ func (p *Parser) ParseConfig(cfg *Config, args []ast.Expr, parsers parsers) erro
 			if cfg.ForStruct == nil {
 				cfg.ForStruct = &Config{}
 			}
-			if err := p.ParseConfig(cfg.ForStruct, call.Args, parsers); err != nil {
+			if err := p.ParseConfig(cfg.ForStruct, call.Args, parsers, fetchMod); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			continue
@@ -203,7 +226,7 @@ func (p *Parser) ParseConfig(cfg *Config, args []ast.Expr, parsers parsers) erro
 			if cfg.ForUnion == nil {
 				cfg.ForUnion = &Config{}
 			}
-			if err := p.ParseConfig(cfg.ForUnion, call.Args, parsers); err != nil {
+			if err := p.ParseConfig(cfg.ForUnion, call.Args, parsers, fetchMod); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			continue
@@ -211,20 +234,20 @@ func (p *Parser) ParseConfig(cfg *Config, args []ast.Expr, parsers parsers) erro
 			if cfg.ForEnum == nil {
 				cfg.ForEnum = &Config{}
 			}
-			if err := p.ParseConfig(cfg.ForEnum, call.Args, parsers); err != nil {
+			if err := p.ParseConfig(cfg.ForEnum, call.Args, parsers, fetchMod); err != nil {
 				errs = errors.Join(errs, err)
 			}
 			continue
 		}
 
-		if err := p.ParseOption(cfg, call, parsers); err != nil {
+		if err := p.ParseOption(cfg, call, parsers, fetchMod); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
 	return errs
 }
 
-func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error { // nolint: gocyclo
+func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers, fetchMod func(token.Pos) (*Module, error)) error { // nolint: gocyclo
 	callee := typeutil.Callee(p.Pkg().TypesInfo, call)
 	if callee == nil || !IsConvgenImport(callee.Pkg().Path()) {
 		return codefmt.Errorf(p, call, "option must be convgen directive")
@@ -232,6 +255,8 @@ func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error 
 
 	name := callee.Name()
 	switch name {
+	case "ImportModule":
+		return p.ParseOptionImportModule(cfg, call, fetchMod)
 	case "ImportFunc":
 		return p.ParseOptionImportFunc(cfg, call, false)
 	case "ImportFuncErr":
@@ -288,6 +313,22 @@ func (p *Parser) ParseOption(cfg *Config, call *ast.CallExpr, ps parsers) error 
 	}
 
 	return codefmt.Errorf(p, call.Fun, "%s is not supported option", name)
+}
+
+func (p *Parser) ParseOptionImportModule(c *Config, call *ast.CallExpr, fetchMod func(token.Pos) (*Module, error)) error {
+	expr, err := needArgs1(p, call)
+	if err != nil {
+		return err
+	}
+
+	mod, err := p.ParseModuleArg(expr, fetchMod)
+	if err != nil {
+		return err
+	}
+	if mod != nil {
+		c.UpdateImport(mod.Config)
+	}
+	return nil
 }
 
 func (p *Parser) ParseOptionImportFunc(c *Config, call *ast.CallExpr, hasErr bool) error {

@@ -201,6 +201,14 @@ func Module(opts ...moduleOption) module {
 	panic("convgen: not generated")
 }
 
+// ImportModule imports configurations and registered functions from another module.
+//
+//	var core = convgen.Module(...)
+//	var ext = convgen.Module(convgen.ImportModule(core), ...)
+func ImportModule(mod module) moduleOption {
+	panic("convgen: not generated")
+}
+
 // Struct directive generates a converter function between two struct types
 // without error:
 //
